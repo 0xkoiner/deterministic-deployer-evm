@@ -18,14 +18,14 @@ fn _validate_network<'a>(
     }
 }
 
-fn _validate_chain(
-    table: &HashMap<String, String>,
+fn _validate_chain<'a>(
+    table: &'a HashMap<String, String>,
     chain: &str,
     network: &str,
-) -> Result<String, RpcError> {
+) -> Result<&'a str, RpcError> {
     table
         .get(chain)
-        .cloned()
+        .map(|s| s.as_str())
         .ok_or_else(|| RpcError::ChainNotFound(chain.to_string(), network.to_string()))
 }
 
@@ -34,7 +34,11 @@ pub fn load_config() -> Result<RpcConfig, RpcError> {
     Ok(config)
 }
 
-pub async fn get_rpc(config: &RpcConfig, network: &str, chain: &str) -> Result<String, RpcError> {
+pub async fn get_rpc<'a>(
+    config: &'a RpcConfig,
+    network: &str,
+    chain: &str,
+) -> Result<&'a str, RpcError> {
     let table = _validate_network(config, network)?;
     _validate_chain(table, chain, network)
 }
