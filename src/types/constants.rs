@@ -1,1 +1,1 @@
-pub const RPC_TOML_PATH: &str = "./src/data/rpc_config.toml"; 
+pub const RPC_TOML: &str = include_str!("../data/rpc_config.toml");

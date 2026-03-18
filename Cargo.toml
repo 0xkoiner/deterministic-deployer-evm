@@ -6,4 +6,18 @@ edition = "2024"
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 toml = "1.0"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["test-util", "rt", "macros"] }
+criterion = { version = "0.5", features = ["async_tokio"] }
+futures = "0.3"
+
+[[test]]
+name = "test_get_rpc"
+path = "test/stub-test/rpc-config/test_get_rpc.rs"
+
+[[bench]]
+name = "rpc_bench"
+path = "test/stub-test/rpc-config/rpc_bench.rs"
+harness = false
