@@ -3,7 +3,7 @@
 // 3. Look up the value by network (mainnet/testnet) → then by chain name
 // 4. Return the RPC URL string
 use crate::types::config::RpcConfig;
-use crate::types::constants::RPC_TOML;
+use crate::types::constants::Constants;
 use crate::types::errors::RpcError;
 use std::collections::HashMap;
 
@@ -30,7 +30,7 @@ fn _validate_chain<'a>(
 }
 
 pub fn load_config() -> Result<RpcConfig, RpcError> {
-    let config: RpcConfig = toml::from_str(RPC_TOML)?;
+    let config: RpcConfig = toml::from_str(Constants::RPC_TOML)?;
     Ok(config)
 }
 

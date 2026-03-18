@@ -6,6 +6,16 @@ pub enum RpcError {
     ChainNotFound(String, String), // (chain, network)
 }
 
+#[derive(Debug)]
+pub enum WalletError {
+    EnvVarMissing(String),
+    InvalidPrivateKey(String),
+    SignerError(String),
+    ProviderError(String),
+    TransactionFailed(String),
+    RpcError(RpcError),
+}
+
 impl std::fmt::Display for RpcError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -19,7 +29,21 @@ impl std::fmt::Display for RpcError {
     }
 }
 
+impl std::fmt::Display for WalletError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WalletError::EnvVarMissing(e) => write!(f, "Environment variable missing: {e}"),
+            WalletError::InvalidPrivateKey(e) => write!(f, "Invalid private key: {e}"),
+            WalletError::SignerError(e) => write!(f, "Signer error: {e}"),
+            WalletError::ProviderError(e) => write!(f, "Provider error: {e}"),
+            WalletError::TransactionFailed(e) => write!(f, "Transaction failed: {e}"),
+            WalletError::RpcError(e) => write!(f, "RPC error: {e}"),
+        }
+    }
+}
+
 impl std::error::Error for RpcError {}
+impl std::error::Error for WalletError {}
 
 impl From<std::io::Error> for RpcError {
     fn from(e: std::io::Error) -> Self {
@@ -30,5 +54,11 @@ impl From<std::io::Error> for RpcError {
 impl From<toml::de::Error> for RpcError {
     fn from(e: toml::de::Error) -> Self {
         RpcError::ParseError(e)
+    }
+}
+
+impl From<RpcError> for WalletError {
+    fn from(e: RpcError) -> Self {
+        WalletError::RpcError(e)
     }
 }

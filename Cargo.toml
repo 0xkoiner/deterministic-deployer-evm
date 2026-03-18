@@ -1,23 +1,29 @@
 [package]
-name = "deterministic-deployer-evm"
-version = "0.1.0"
 edition = "2024"
+version = "0.1.0"
+name = "deterministic-deployer-evm"
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
 toml = "1.0"
+dotenv = "0.15"
+alloy = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["test-util", "rt", "macros"] }
-criterion = { version = "0.5", features = ["async_tokio"] }
 futures = "0.3"
+criterion = { version = "0.5", features = ["async_tokio"] }
+tokio = { version = "1", features = ["test-util", "rt", "macros"] }
 
 [[test]]
 name = "test_get_rpc"
 path = "test/stub-test/rpc-config/test_get_rpc.rs"
 
+[[test]]
+name = "test_wallet_init"
+path = "test/stub-test/wallet-client/test_wallet_init.rs"
+
 [[bench]]
+harness = false
 name = "rpc_bench"
 path = "test/stub-test/rpc-config/rpc_bench.rs"
-harness = false

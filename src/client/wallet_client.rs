@@ -3,6 +3,7 @@ use crate::types::errors::WalletError;
 use alloy::primitives::Address;
 use alloy::signers::local::PrivateKeySigner;
 
+#[derive(Debug)]
 pub struct WalletClient {
     signer: PrivateKeySigner,
 }
