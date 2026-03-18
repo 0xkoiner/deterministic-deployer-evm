@@ -1,38 +1,35 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use deterministic_deployer_evm::client::wallet_client::WalletClient;
 
-const TEST_PRIVATE_KEY: &str =
-    "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+const TEST_PRIVATE_KEY: &str = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 fn bench_wallet_init_single(c: &mut Criterion) {
-    let rt = tokio::runtime::Runtime::new().unwrap();
     c.bench_function("wallet_init_single", |b| {
-        b.iter(|| rt.block_on(WalletClient::from_private_key(TEST_PRIVATE_KEY)))
+        b.iter(|| WalletClient::from_private_key(TEST_PRIVATE_KEY))
     });
 }
 
 fn bench_wallet_init_100_sequential(c: &mut Criterion) {
-    let rt = tokio::runtime::Runtime::new().unwrap();
     c.bench_function("wallet_init_100_sequential", |b| {
         b.iter(|| {
-            rt.block_on(async {
-                for _ in 0..100 {
-                    let _ = WalletClient::from_private_key(TEST_PRIVATE_KEY).await;
-                }
-            })
+            for _ in 0..100 {
+                let _ = WalletClient::from_private_key(TEST_PRIVATE_KEY);
+            }
         })
     });
 }
 
 fn bench_wallet_init_100_parallel(c: &mut Criterion) {
-    let rt = tokio::runtime::Runtime::new().unwrap();
     c.bench_function("wallet_init_100_parallel", |b| {
         b.iter(|| {
-            rt.block_on(async {
-                let futures: Vec<_> = (0..100)
-                    .map(|_| WalletClient::from_private_key(TEST_PRIVATE_KEY))
+            std::thread::scope(|s| {
+                let handles: Vec<_> = (0..100)
+                    .map(|_| s.spawn(|| WalletClient::from_private_key(TEST_PRIVATE_KEY)))
                     .collect();
-                futures::future::join_all(futures).await
+                handles
+                    .into_iter()
+                    .map(|h| h.join().unwrap())
+                    .collect::<Vec<_>>()
             })
         })
     });
@@ -46,14 +43,14 @@ criterion_group!(
 );
 criterion_main!(benches);
 
-/*                                                                                       
-┌────────────────────────────────┬──────────┬──────────┬──────────┐
-│          Benchmark             │   Low    │   Mean   │   High   │                              
-├────────────────────────────────┼──────────┼──────────┼──────────┤                            
-│ wallet_init_single             │ 20.85 µs │ 20.96 µs │ 21.10 µs │                              
-├────────────────────────────────┼──────────┼──────────┼──────────┤                              
-│ wallet_init_100_sequential     │  2.08 ms │  2.09 ms │  2.09 ms │                              
-├────────────────────────────────┼──────────┼──────────┼──────────┤                              
-│ wallet_init_100_parallel       │  2.08 ms │  2.09 ms │  2.11 ms │                              
-└────────────────────────────────┴──────────┴──────────┴──────────┘ 
+/*
+┌────────────────────────────┬───────────┬───────────┬────────┐
+│         Benchmark          │  Before   │   After   │ Change │
+├────────────────────────────┼───────────┼───────────┼────────┤
+│ wallet_init_single         │ ~20.96 µs │ ~20.82 µs │ ~-0.5% │
+├────────────────────────────┼───────────┼───────────┼────────┤
+│ wallet_init_100_sequential │ ~2.09 ms  │ ~2.08 ms  │ ~-0.5% │
+├────────────────────────────┼───────────┼───────────┼────────┤
+│ wallet_init_100_parallel   │ ~2.09 ms  │ ~1.24 ms  │ -40.8% │
+└────────────────────────────┴───────────┴───────────┴────────┘
 */

@@ -35,18 +35,13 @@ async fn main() {
     };
     println!("{chain_error}");
 
-    let wallet = WalletClient::from_env()
-        .await
-        .expect("Failed to create wallet");
+    let wallet = WalletClient::from_env().expect("Failed to create wallet");
     println!("Wallet address: {}", wallet.address());
 
-    let (wallet_result, rpc_result) = tokio::join!(
-        WalletClient::from_env(),
-        get_rpc(&config, "mainnet", "ethereum"),
-    );
-
-    let wallet2 = wallet_result.expect("Failed to create wallet");
-    let eth_rpc2 = rpc_result.expect("Failed to get RPC");
+    let wallet2 = WalletClient::from_env().expect("Failed to create wallet");
+    let eth_rpc2 = get_rpc(&config, "mainnet", "ethereum")
+        .await
+        .expect("Failed to get RPC");
 
     println!("Wallet address: {}", wallet2.address());
     println!("Wallet Rpc: {}", eth_rpc2);

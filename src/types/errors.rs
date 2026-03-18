@@ -8,7 +8,7 @@ pub enum RpcError {
 
 #[derive(Debug)]
 pub enum WalletError {
-    EnvVarMissing(String),
+    EnvVarMissing(&'static str),
     InvalidPrivateKey(String),
     SignerError(String),
     ProviderError(String),
