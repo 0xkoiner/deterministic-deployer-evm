@@ -27,3 +27,8 @@ path = "test/stub-test/wallet-client/test_wallet_init.rs"
 harness = false
 name = "rpc_bench"
 path = "test/stub-test/rpc-config/rpc_bench.rs"
+
+[[bench]]
+harness = false
+name = "wallet_init_bench"
+path = "test/stub-test/wallet-client/wallet_init_bench.rs"
