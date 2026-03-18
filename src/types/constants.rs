@@ -1,0 +1,1 @@
+pub const RPC_TOML_PATH: &str = "./src/data/rpc_config.toml"; 
