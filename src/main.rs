@@ -1,20 +1,33 @@
-mod types;                                                                                                                           
+mod types;
 mod utils;
 
-use crate::types::types::RpcConfig;
-use utils::init_rpc::{load_config, get_rpc};
+use crate::types::config::RpcConfig;
+use utils::init_rpc::{get_rpc, load_config};
 
-#[tokio::main]                                                                                                                       
+#[tokio::main]
 async fn main() {
-    let config:RpcConfig = load_config().await.unwrap();
-    let eth_rpc: String = get_rpc(&config, "mainnet", "ethereum").unwrap();
-    let sepolia_rpc: String = get_rpc(&config, "testnet", "sepolia").unwrap();
-    
+    let config: RpcConfig = load_config().expect("Failed to load RPC config");
+    let eth_rpc = match get_rpc(&config, "mainnet", "ethereum").await {
+        Ok(url) => url,
+        Err(e) => format!("Error: {e}"),
+    };
+    let sepolia_rpc = match get_rpc(&config, "testnet", "sepolia").await {
+        Ok(url) => url,
+        Err(e) => format!("Error: {e}"),
+    };
+
     println!("{eth_rpc}");
     println!("{sepolia_rpc}");
-    
-    // let network_error: String = get_rpc(&config, "error", "sepolia").unwrap();
-    // println!("{network_error}");
-    // let chain_error: String = get_rpc(&config, "mainnet", "error").unwrap();
-    // println!("{chain_error}");
-}  
+
+    let network_error = match get_rpc(&config, "error", "sepolia").await {
+        Ok(url) => url,
+        Err(e) => format!("Error: {e}"),
+    };
+    println!("{network_error}");
+
+    let chain_error = match get_rpc(&config, "mainnet", "error").await {
+        Ok(url) => url,
+        Err(e) => format!("Error: {e}"),
+    };
+    println!("{chain_error}");
+}

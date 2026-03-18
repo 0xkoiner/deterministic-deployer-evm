@@ -1,29 +1,40 @@
-/**
- *  1. Read a TOML file from disk
- *  2. Parse it into a Rust data structure
- *  3. Look up the value by network (mainnet/testnet) → then by chain name
- *  4. Return the RPC URL string"];
- */
+// 1. Read a TOML file from disk
+// 2. Parse it into a Rust data structure
+// 3. Look up the value by network (mainnet/testnet) → then by chain name
+// 4. Return the RPC URL string
+use crate::types::config::RpcConfig;
+use crate::types::constants::RPC_TOML;
+use crate::types::errors::RpcError;
+use std::collections::HashMap;
 
-use tokio::fs;                                                                                                                       
-use crate::types::types::RpcConfig;
-use crate::types::constants::RPC_TOML_PATH;                                                                                          
-                                                                                                                                    
-pub async fn load_config() -> Result<RpcConfig, Box<dyn std::error::Error>> {                                                        
-    let toml = fs::read_to_string(RPC_TOML_PATH).await?;                                                                             
-    let config: RpcConfig = toml::from_str(&toml)?;                                                                                  
+fn _validate_network<'a>(
+    config: &'a RpcConfig,
+    network: &str,
+) -> Result<&'a HashMap<String, String>, RpcError> {
+    match network {
+        "mainnet" => Ok(&config.mainnet),
+        "testnet" => Ok(&config.testnet),
+        _ => Err(RpcError::UnknownNetwork(network.to_string())),
+    }
+}
+
+fn _validate_chain(
+    table: &HashMap<String, String>,
+    chain: &str,
+    network: &str,
+) -> Result<String, RpcError> {
+    table
+        .get(chain)
+        .cloned()
+        .ok_or_else(|| RpcError::ChainNotFound(chain.to_string(), network.to_string()))
+}
+
+pub fn load_config() -> Result<RpcConfig, RpcError> {
+    let config: RpcConfig = toml::from_str(RPC_TOML)?;
     Ok(config)
-}                                                                                                                                    
-                
-pub fn get_rpc(config: &RpcConfig, network: &str, chain: &str) -> Result<String, Box<dyn std::error::Error>> {                       
-    let table = match network {
-        "mainnet" => &config.mainnet,                                                                                                
-        "testnet" => &config.testnet,
-        _ => return Err("Unknown network. Use mainnet or testnet".into()),                                                           
-    };                                                                                                                               
-                                                                                                                                    
-    match table.get(chain) {                                                                                                         
-        Some(url) => Ok(url.clone()),
-        None => Err(format!("Chain {chain} not found in {network}").into()),
-    }                                                                                                                                
+}
+
+pub async fn get_rpc(config: &RpcConfig, network: &str, chain: &str) -> Result<String, RpcError> {
+    let table = _validate_network(config, network)?;
+    _validate_chain(table, chain, network)
 }
