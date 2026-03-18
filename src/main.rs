@@ -1,11 +1,15 @@
+mod client;
 mod types;
 mod utils;
 
+use crate::client::wallet_client::WalletClient;
 use crate::types::config::RpcConfig;
 use utils::init_rpc::{get_rpc, load_config};
 
 #[tokio::main]
 async fn main() {
+    dotenv::dotenv().ok();
+
     let config: RpcConfig = load_config().expect("Failed to load RPC config");
     let eth_rpc = match get_rpc(&config, "mainnet", "ethereum").await {
         Ok(url) => url.to_string(),
@@ -30,4 +34,15 @@ async fn main() {
         Err(e) => format!("Error: {e}"),
     };
     println!("{chain_error}");
+
+    let wallet = WalletClient::from_env().expect("Failed to create wallet");
+    println!("Wallet address: {}", wallet.address());
+
+    let wallet2 = WalletClient::from_env().expect("Failed to create wallet");
+    let eth_rpc2 = get_rpc(&config, "mainnet", "ethereum")
+        .await
+        .expect("Failed to get RPC");
+
+    println!("Wallet address: {}", wallet2.address());
+    println!("Wallet Rpc: {}", eth_rpc2);
 }
