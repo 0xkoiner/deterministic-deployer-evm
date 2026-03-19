@@ -6,9 +6,12 @@ name = "deterministic-deployer-evm"
 [dependencies]
 toml = "1.0"
 dotenv = "0.15"
-alloy = { version = "1.0", features = ["full"] }
+alloy = { version = "1.0", features = ["full", "signer-keystore"] }
 serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+eyre = "0.6"
+rand = "0.8"
+rpassword = "5"
 
 [dev-dependencies]
 futures = "0.3"
@@ -24,6 +27,15 @@ path = "test/stub-test/rpc-config/test_get_rpc.rs"
 name = "test_wallet_init"
 path = "test/stub-test/wallet-client/test_wallet_init.rs"
 
+[[test]]
+name = "test_create_keystore"
+path = "test/stub-test/keystore/test_create_keystore.rs"
+
+[[bench]]
+harness = false
+name = "create_keystore_bench"
+path = "test/stub-test/keystore/create_keystore_bench.rs"
+
 [[bench]]
 harness = false
 name = "rpc_bench"
@@ -33,3 +45,12 @@ path = "test/stub-test/rpc-config/rpc_bench.rs"
 harness = false
 name = "wallet_init_bench"
 path = "test/stub-test/wallet-client/wallet_init_bench.rs"
+
+[[test]]
+name = "test_public_client"
+path = "test/stub-test/public-client/test_public_client.rs"
+
+[[bench]]
+harness = false
+name = "public_client_bench"
+path = "test/stub-test/public-client/public_client_bench.rs"
