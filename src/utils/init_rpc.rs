@@ -2,10 +2,10 @@
 // 2. Parse it into a Rust data structure
 // 3. Look up the value by network (mainnet/testnet) → then by chain name
 // 4. Return the RPC URL string
+use std::collections::HashMap;
+use crate::types::errors::RpcError;
 use crate::types::config::RpcConfig;
 use crate::types::constants::Constants;
-use crate::types::errors::RpcError;
-use std::collections::HashMap;
 
 fn _validate_network<'a>(
     config: &'a RpcConfig,
