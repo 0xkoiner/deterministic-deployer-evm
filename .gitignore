@@ -3,3 +3,4 @@ CLAUDE.md
 .claude/*
 .env
 planning/
+src/bin

@@ -1,23 +1,21 @@
+use crate::types::constants::Constants;
+use std::fs::{create_dir_all, rename};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::fs::{create_dir_all, rename};
-use crate::types::constants::Constants;
 
-use rand::thread_rng;
-use eyre::{Result, ensure};
-use rpassword::read_password;
 use alloy::primitives::{Address, hex};
-use alloy::signers::local::LocalSigner;
 use alloy::signers::k256::ecdsa::SigningKey;
+use alloy::signers::local::LocalSigner;
+use eyre::{Result, ensure};
+use rand::thread_rng;
+use rpassword::read_password;
 
-/// Prompts for a hidden input with the given message and returns the trimmed value.
 fn _prompt_hidden(msg: &str) -> Result<String> {
     print!("{msg}");
     io::stdout().flush()?;
     Ok(read_password()?)
 }
 
-/// Parses a hex-encoded private key string (with or without `0x` prefix) into raw bytes.
 fn _parse_private_key(input: &str) -> Result<[u8; 32]> {
     let trimmed: &str = input.trim();
     let pk_hex: &str = trimmed.strip_prefix("0x").unwrap_or(trimmed);
@@ -26,13 +24,6 @@ fn _parse_private_key(input: &str) -> Result<[u8; 32]> {
         .map_err(|_| eyre::eyre!("Private key must be exactly 32 bytes"))
 }
 
-/// Interactively creates an encrypted keystore file from a private key.
-///
-/// Prompts the user for:
-/// 1. Private key (hidden input, supports optional `0x` prefix)
-/// 2. Password + confirmation (hidden input)
-///
-/// Writes the keystore to `src/data/keystore/ks-<checksummed_address>`.
 pub fn create_keystore() -> Result<()> {
     let pk_input: String = _prompt_hidden("Enter your private key: ")?;
     let private_key: [u8; 32] = _parse_private_key(&pk_input)?;
