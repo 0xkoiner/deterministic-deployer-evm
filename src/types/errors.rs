@@ -84,3 +84,26 @@ impl From<RpcError> for PublicClientError {
         PublicClientError::RpcConfig(e)
     }
 }
+
+// ── CLI Errors ──────────────────────────────────────────
+
+#[derive(Debug)]
+pub enum CliError {
+    MissingContractPath,
+    NoChainsSelected,
+    UnknownFlag(String),
+    ParseError(String),
+}
+
+impl std::fmt::Display for CliError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            CliError::MissingContractPath => write!(f, "Missing contract path"),
+            CliError::NoChainsSelected => write!(f, "No chains selected"),
+            CliError::UnknownFlag(flag) => write!(f, "Unknown flag: --{flag}"),
+            CliError::ParseError(e) => write!(f, "Parse error: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for CliError {}

@@ -2,6 +2,7 @@
 edition = "2024"
 version = "0.1.0"
 name = "deterministic-deployer-evm"
+default-run = "deterministic-deployer-evm"
 
 [dependencies]
 toml = "1.0"
@@ -12,6 +13,9 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 eyre = "0.6"
 rand = "0.8"
 rpassword = "5"
+log = "0.4"                                                                                                       
+env_logger = "0.11"
+lexopt = "0.3"
 
 [dev-dependencies]
 futures = "0.3"

@@ -28,10 +28,7 @@ async fn test_new_testnet_sepolia() {
     assert!(client.is_ok(), "should connect to testnet sepolia");
     let client = client.unwrap();
     let chain_id = client.get_chain_id().await.unwrap();
-    assert_eq!(
-        chain_id, 11155111,
-        "sepolia chain_id should be 11155111"
-    );
+    assert_eq!(chain_id, 11155111, "sepolia chain_id should be 11155111");
 }
 
 #[tokio::test]
@@ -59,14 +56,16 @@ async fn test_from_url() {
 
 #[tokio::test]
 async fn test_get_block_number() {
-    let client = PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
+    let client =
+        PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
     let block = client.get_block_number().await.unwrap();
     assert!(block > 0, "block number should be > 0, got {block}");
 }
 
 #[tokio::test]
 async fn test_get_balance() {
-    let client = PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
+    let client =
+        PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
     let balance = client.get_balance(Address::ZERO).await.unwrap();
     // Zero address has some balance from dust, just check it doesn't error
     assert!(balance >= U256::ZERO, "balance should be >= 0");
@@ -74,14 +73,16 @@ async fn test_get_balance() {
 
 #[tokio::test]
 async fn test_get_gas_price() {
-    let client = PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
+    let client =
+        PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
     let gas_price = client.get_gas_price().await.unwrap();
     assert!(gas_price > 0, "gas price should be > 0, got {gas_price}");
 }
 
 #[tokio::test]
 async fn test_get_block_by_number() {
-    let client = PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
+    let client =
+        PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
     let block = client
         .get_block_by_number(BlockNumberOrTag::Number(1))
         .await
@@ -91,14 +92,16 @@ async fn test_get_block_by_number() {
 
 #[tokio::test]
 async fn test_get_code_eoa() {
-    let client = PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
+    let client =
+        PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
     let code = client.get_code(Address::ZERO).await.unwrap();
     assert!(code.is_empty(), "EOA should have empty code");
 }
 
 #[tokio::test]
 async fn test_get_code_contract() {
-    let client = PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
+    let client =
+        PublicClient::new_public_provider_from_url("https://ethereum-rpc.publicnode.com").unwrap();
     // WETH on mainnet
     let weth: Address = address!("C02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2");
     let code = client.get_code(weth).await.unwrap();
@@ -107,7 +110,9 @@ async fn test_get_code_contract() {
 
 #[tokio::test]
 async fn test_accessors() {
-    let client = PublicClient::new_public_provider("mainnet", "ethereum").await.unwrap();
+    let client = PublicClient::new_public_provider("mainnet", "ethereum")
+        .await
+        .unwrap();
     assert_eq!(client.chain(), "ethereum");
     assert_eq!(client.network(), "mainnet");
     assert_eq!(client.rpc_url(), "https://ethereum-rpc.publicnode.com");
