@@ -7,6 +7,10 @@ use crate::types::config::RpcConfig;
 use crate::types::errors::PublicClientError;
 use crate::utils::init_rpc::{config, get_rpc};
 
+fn map_provider_err(e: impl std::fmt::Display) -> PublicClientError {
+    PublicClientError::ProviderError(e.to_string())
+}
+
 #[derive(Debug)]
 pub struct PublicClient {
     provider: DynProvider,
@@ -16,21 +20,17 @@ pub struct PublicClient {
 }
 
 impl PublicClient {
-    pub async fn new_public_provider(
-        network: &str,
-        chain: &str,
-    ) -> Result<Self, PublicClientError> {
-        Self::new_with_config(config(), network, chain).await
+    pub fn new_public_provider(network: &str, chain: &str) -> Result<Self, PublicClientError> {
+        Self::new_with_config(config(), network, chain)
     }
 
-    pub async fn new_with_config(
+    pub fn new_with_config(
         config: &RpcConfig,
         network: &str,
         chain: &str,
     ) -> Result<Self, PublicClientError> {
-        let rpc_url: &str = get_rpc(config, network, chain)
-            .await
-            .map_err(PublicClientError::RpcConfig)?;
+        let rpc_url: &str =
+            get_rpc(config, network, chain).map_err(PublicClientError::RpcConfig)?;
 
         let provider: DynProvider = ProviderBuilder::new()
             .connect_http(
@@ -66,45 +66,42 @@ impl PublicClient {
     }
 
     pub async fn get_chain_id(&self) -> Result<u64, PublicClientError> {
-        self.provider
-            .get_chain_id()
-            .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+        self.provider.get_chain_id().await.map_err(map_provider_err)
     }
 
     pub async fn get_block_number(&self) -> Result<u64, PublicClientError> {
         self.provider
             .get_block_number()
             .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+            .map_err(map_provider_err)
     }
 
     pub async fn get_gas_price(&self) -> Result<u128, PublicClientError> {
         self.provider
             .get_gas_price()
             .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+            .map_err(map_provider_err)
     }
 
     pub async fn get_balance(&self, address: Address) -> Result<U256, PublicClientError> {
         self.provider
             .get_balance(address)
             .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+            .map_err(map_provider_err)
     }
 
     pub async fn get_transaction_count(&self, address: Address) -> Result<u64, PublicClientError> {
         self.provider
             .get_transaction_count(address)
             .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+            .map_err(map_provider_err)
     }
 
     pub async fn get_code(&self, address: Address) -> Result<Bytes, PublicClientError> {
         self.provider
             .get_code_at(address)
             .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+            .map_err(map_provider_err)
     }
 
     pub async fn get_block_by_number(
@@ -114,7 +111,7 @@ impl PublicClient {
         self.provider
             .get_block_by_number(number)
             .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+            .map_err(map_provider_err)
     }
 
     pub async fn get_transaction_receipt(
@@ -124,28 +121,25 @@ impl PublicClient {
         self.provider
             .get_transaction_receipt(hash)
             .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+            .map_err(map_provider_err)
     }
 
     pub async fn call(&self, tx: TransactionRequest) -> Result<Bytes, PublicClientError> {
-        self.provider
-            .call(tx)
-            .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+        self.provider.call(tx).await.map_err(map_provider_err)
     }
 
     pub async fn estimate_gas(&self, tx: TransactionRequest) -> Result<u64, PublicClientError> {
         self.provider
             .estimate_gas(tx)
             .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+            .map_err(map_provider_err)
     }
 
     pub async fn get_logs(&self, filter: &Filter) -> Result<Vec<Log>, PublicClientError> {
         self.provider
             .get_logs(filter)
             .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+            .map_err(map_provider_err)
     }
 
     pub async fn get_storage_at(
@@ -156,7 +150,7 @@ impl PublicClient {
         self.provider
             .get_storage_at(address, slot)
             .await
-            .map_err(|e| PublicClientError::ProviderError(e.to_string()))
+            .map_err(map_provider_err)
     }
 
     #[inline]

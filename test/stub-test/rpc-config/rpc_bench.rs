@@ -6,24 +6,19 @@ fn bench_load_config(c: &mut Criterion) {
 }
 
 fn bench_get_rpc_single(c: &mut Criterion) {
-    let rt = tokio::runtime::Runtime::new().unwrap();
     let config = load_config().unwrap();
     c.bench_function("get_rpc_single", |b| {
-        b.iter(|| rt.block_on(get_rpc(&config, "mainnet", "ethereum")))
+        b.iter(|| get_rpc(&config, "mainnet", "ethereum"))
     });
 }
 
-fn bench_get_rpc_100_parallel(c: &mut Criterion) {
-    let rt = tokio::runtime::Runtime::new().unwrap();
+fn bench_get_rpc_100_sequential(c: &mut Criterion) {
     let config = load_config().unwrap();
-    c.bench_function("get_rpc_100_parallel", |b| {
+    c.bench_function("get_rpc_100_sequential", |b| {
         b.iter(|| {
-            rt.block_on(async {
-                let futures: Vec<_> = (0..100)
-                    .map(|_| get_rpc(&config, "mainnet", "ethereum"))
-                    .collect();
-                futures::future::join_all(futures).await
-            })
+            for _ in 0..100 {
+                let _ = get_rpc(&config, "mainnet", "ethereum");
+            }
         })
     });
 }
@@ -32,7 +27,7 @@ criterion_group!(
     benches,
     bench_load_config,
     bench_get_rpc_single,
-    bench_get_rpc_100_parallel
+    bench_get_rpc_100_sequential
 );
 criterion_main!(benches);
 

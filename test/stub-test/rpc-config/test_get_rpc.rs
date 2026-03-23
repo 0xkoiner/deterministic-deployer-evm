@@ -8,10 +8,10 @@ fn test_load_config_success() {
     assert!(!config.testnet.is_empty(), "testnet should have chains");
 }
 
-#[tokio::test]
-async fn test_get_rpc_mainnet_ethereum() {
+#[test]
+fn test_get_rpc_mainnet_ethereum() {
     let config: RpcConfig = load_config().unwrap();
-    let url: &str = get_rpc(&config, "mainnet", "ethereum").await.unwrap();
+    let url: &str = get_rpc(&config, "mainnet", "ethereum").unwrap();
     assert!(
         url.starts_with("https://"),
         "URL should start with https://"
@@ -19,10 +19,10 @@ async fn test_get_rpc_mainnet_ethereum() {
     assert!(url.contains("ethereum"), "URL should contain 'ethereum'");
 }
 
-#[tokio::test]
-async fn test_get_rpc_testnet_sepolia() {
+#[test]
+fn test_get_rpc_testnet_sepolia() {
     let config: RpcConfig = load_config().unwrap();
-    let url: &str = get_rpc(&config, "testnet", "sepolia").await.unwrap();
+    let url: &str = get_rpc(&config, "testnet", "sepolia").unwrap();
     assert!(
         url.starts_with("https://"),
         "URL should start with https://"
@@ -30,19 +30,19 @@ async fn test_get_rpc_testnet_sepolia() {
     assert!(url.contains("sepolia"), "URL should contain 'sepolia'");
 }
 
-#[tokio::test]
-async fn test_revert_unknown_network() {
+#[test]
+fn test_revert_unknown_network() {
     let config: RpcConfig = load_config().unwrap();
-    let result = get_rpc(&config, "error", "ethereum").await;
+    let result = get_rpc(&config, "error", "ethereum");
     assert!(result.is_err());
     let err_msg: String = result.unwrap_err().to_string();
     assert_eq!(err_msg, "Unknown network: error");
 }
 
-#[tokio::test]
-async fn test_revert_unknown_chain() {
+#[test]
+fn test_revert_unknown_chain() {
     let config: RpcConfig = load_config().unwrap();
-    let result = get_rpc(&config, "mainnet", "error").await;
+    let result = get_rpc(&config, "mainnet", "error");
     assert!(result.is_err());
     let err_msg: String = result.unwrap_err().to_string();
     assert_eq!(err_msg, "Chain error not found in mainnet");
