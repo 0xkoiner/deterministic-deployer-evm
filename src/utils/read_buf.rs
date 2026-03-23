@@ -157,7 +157,6 @@ pub struct CliArgs {
     pub chains: Vec<Chain>,
 }
 
-
 pub fn parse_args() -> Result<CliArgs, CliError> {
     use lexopt::prelude::*;
 
@@ -166,7 +165,10 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
     let mut seen: ChainSet = ChainSet::new();
     let mut parser: lexopt::Parser = lexopt::Parser::from_env();
 
-    while let Some(arg) = parser.next().map_err(|e| CliError::ParseError(e.to_string()))? {
+    while let Some(arg) = parser
+        .next()
+        .map_err(|e| CliError::ParseError(e.to_string()))?
+    {
         match arg {
             Short('h') | Long("help") => {
                 print_usage();
