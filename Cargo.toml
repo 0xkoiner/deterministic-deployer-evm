@@ -14,7 +14,8 @@ eyre = "0.6"
 rand = "0.8"
 rpassword = "5"
 log = "0.4"                                                                                                       
-env_logger = "0.11" 
+env_logger = "0.11"
+lexopt = "0.3"
 
 [dev-dependencies]
 futures = "0.3"
