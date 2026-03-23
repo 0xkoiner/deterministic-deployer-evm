@@ -1,5 +1,5 @@
 use alloy::eips::BlockNumberOrTag;
-use alloy::primitives::{Address, Bytes, B256, U256};
+use alloy::primitives::{Address, B256, Bytes, U256};
 use alloy::providers::{DynProvider, Provider, ProviderBuilder};
 use alloy::rpc::types::{Block, Filter, Log, TransactionReceipt, TransactionRequest};
 
@@ -16,7 +16,10 @@ pub struct PublicClient {
 }
 
 impl PublicClient {
-    pub async fn new_public_provider(network: &str, chain: &str) -> Result<Self, PublicClientError> {
+    pub async fn new_public_provider(
+        network: &str,
+        chain: &str,
+    ) -> Result<Self, PublicClientError> {
         Self::new_with_config(config(), network, chain).await
     }
 
@@ -30,9 +33,11 @@ impl PublicClient {
             .map_err(PublicClientError::RpcConfig)?;
 
         let provider: DynProvider = ProviderBuilder::new()
-            .connect_http(rpc_url.parse().map_err(|e| {
-                PublicClientError::InvalidUrl(format!("{e}"))
-            })?)
+            .connect_http(
+                rpc_url
+                    .parse()
+                    .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?,
+            )
             .erased();
 
         Ok(Self {
@@ -45,9 +50,11 @@ impl PublicClient {
 
     pub fn new_public_provider_from_url(rpc_url: &str) -> Result<Self, PublicClientError> {
         let provider: DynProvider = ProviderBuilder::new()
-            .connect_http(rpc_url.parse().map_err(|e| {
-                PublicClientError::InvalidUrl(format!("{e}"))
-            })?)
+            .connect_http(
+                rpc_url
+                    .parse()
+                    .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?,
+            )
             .erased();
 
         Ok(Self {

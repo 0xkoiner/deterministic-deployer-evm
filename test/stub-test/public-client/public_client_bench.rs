@@ -30,8 +30,7 @@ fn bench_get_balance(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
     let client = make_client();
     c.bench_function("public_client_get_balance", |b| {
-        b.to_async(&rt)
-            .iter(|| client.get_balance(Address::ZERO))
+        b.to_async(&rt).iter(|| client.get_balance(Address::ZERO))
     });
 }
 
@@ -79,19 +78,19 @@ criterion_group!(
 criterion_main!(benches);
 
 /*
-┌─────────────────────────┬──────────┐                                                            
-│        Benchmark        │   Time   │                                                              
-├─────────────────────────┼──────────┤                                                            
-│ get_chain_id            │ 53.4 ms  │                                                              
-├─────────────────────────┼──────────┤                                                            
-│ get_block_number        │ 52.1 ms  │      
-├─────────────────────────┼──────────┤      
-│ get_balance             │ 53.6 ms  │  
-├─────────────────────────┼──────────┤                                                              
-│ get_block_by_number     │ 59.7 ms  │                                                              
-├─────────────────────────┼──────────┤                                                              
-│ 10_sequential_rpc_calls │ 521.6 ms │                                                              
-├─────────────────────────┼──────────┤                                                            
-│ 10_parallel_rpc_calls   │ 57.9 ms  │                                                              
-└─────────────────────────┴──────────┘     
+┌─────────────────────────┬──────────┐
+│        Benchmark        │   Time   │
+├─────────────────────────┼──────────┤
+│ get_chain_id            │ 53.4 ms  │
+├─────────────────────────┼──────────┤
+│ get_block_number        │ 52.1 ms  │
+├─────────────────────────┼──────────┤
+│ get_balance             │ 53.6 ms  │
+├─────────────────────────┼──────────┤
+│ get_block_by_number     │ 59.7 ms  │
+├─────────────────────────┼──────────┤
+│ 10_sequential_rpc_calls │ 521.6 ms │
+├─────────────────────────┼──────────┤
+│ 10_parallel_rpc_calls   │ 57.9 ms  │
+└─────────────────────────┴──────────┘
 */
