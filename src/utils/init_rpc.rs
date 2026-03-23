@@ -6,6 +6,14 @@ use crate::types::config::RpcConfig;
 use crate::types::constants::Constants;
 use crate::types::errors::RpcError;
 use std::collections::HashMap;
+use std::sync::OnceLock;
+
+static RPC_CONFIG: OnceLock<RpcConfig> = OnceLock::new();
+
+/// Returns `&'static RpcConfig`, parsing the embedded TOML exactly once.
+pub fn config() -> &'static RpcConfig {
+    RPC_CONFIG.get_or_init(|| load_config().expect("Failed to parse embedded RPC config"))
+}
 
 fn _validate_network<'a>(
     config: &'a RpcConfig,

@@ -5,7 +5,7 @@ use alloy::rpc::types::{Block, Filter, Log, TransactionReceipt, TransactionReque
 
 use crate::types::config::RpcConfig;
 use crate::types::errors::PublicClientError;
-use crate::utils::init_rpc::{get_rpc, load_config};
+use crate::utils::init_rpc::{config, get_rpc};
 
 #[derive(Debug)]
 pub struct PublicClient {
@@ -17,8 +17,15 @@ pub struct PublicClient {
 
 impl PublicClient {
     pub async fn new_public_provider(network: &str, chain: &str) -> Result<Self, PublicClientError> {
-        let config:RpcConfig = load_config().map_err(PublicClientError::RpcConfig)?;
-        let rpc_url: &str = get_rpc(&config, network, chain)
+        Self::new_with_config(config(), network, chain).await
+    }
+
+    pub async fn new_with_config(
+        config: &RpcConfig,
+        network: &str,
+        chain: &str,
+    ) -> Result<Self, PublicClientError> {
+        let rpc_url: &str = get_rpc(config, network, chain)
             .await
             .map_err(PublicClientError::RpcConfig)?;
 
