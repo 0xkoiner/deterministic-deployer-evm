@@ -9,6 +9,13 @@ use crate::types::constants::Constants;
 use crate::types::errors::PublicClientError;
 use crate::types::errors::WalletError;
 
+fn parse_signer(hex: &str) -> Result<PrivateKeySigner, WalletError> {
+    hex.parse()
+        .map_err(|e: alloy::signers::local::LocalSignerError| {
+            WalletError::InvalidPrivateKey(e.to_string())
+        })
+}
+
 #[derive(Debug)]
 pub struct WalletClient {
     signer: PrivateKeySigner,
@@ -23,26 +30,16 @@ impl WalletClient {
     }
 
     pub fn from_private_key(hex: &str) -> Result<Self, WalletError> {
-        let signer: PrivateKeySigner =
-            hex.parse()
-                .map_err(|e: alloy::signers::local::LocalSignerError| {
-                    WalletError::InvalidPrivateKey(e.to_string())
-                })?;
+        let signer: PrivateKeySigner = parse_signer(hex)?;
         Ok(Self {
             signer,
             public: None,
         })
     }
 
-    pub async fn new(network: &str, chain: &str, private_key: &str) -> Result<Self, WalletError> {
-        let signer: PrivateKeySigner =
-            private_key
-                .parse()
-                .map_err(|e: alloy::signers::local::LocalSignerError| {
-                    WalletError::InvalidPrivateKey(e.to_string())
-                })?;
+    pub fn new(network: &str, chain: &str, private_key: &str) -> Result<Self, WalletError> {
+        let signer: PrivateKeySigner = parse_signer(private_key)?;
         let public: PublicClient = PublicClient::new_public_provider(network, chain)
-            .await
             .map_err(|e: PublicClientError| WalletError::SignerError(e.to_string()))?;
         Ok(Self {
             signer,
@@ -50,10 +47,10 @@ impl WalletClient {
         })
     }
 
-    pub async fn from_env_with_provider(network: &str, chain: &str) -> Result<Self, WalletError> {
+    pub fn from_env_with_provider(network: &str, chain: &str) -> Result<Self, WalletError> {
         let key: String = var(Constants::PRIVATE_KEY_ENV)
             .map_err(|_| WalletError::EnvVarMissing(Constants::PRIVATE_KEY_ENV))?;
-        Self::new(network, chain, &key).await
+        Self::new(network, chain, &key)
     }
 
     #[inline]

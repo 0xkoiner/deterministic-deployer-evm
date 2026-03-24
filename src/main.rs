@@ -1,21 +1,13 @@
-mod client;
-mod types;
-mod utils;
-
-use crate::utils::read_buf::parse_args;
-
 use deterministic_deployer_evm::client::wallet_client::WalletClient;
-use types::constants::Constants;
-use types::errors::CliError;
-use utils::read_buf::CliArgs;
-use tokio::task::JoinHandle;
-
-#[macro_use]
-extern crate log;
+use deterministic_deployer_evm::helpers::balance_checker::check_balance;
+use deterministic_deployer_evm::types::constants::Constants;
+use deterministic_deployer_evm::types::errors::CliError;
+use deterministic_deployer_evm::utils::read_buf::{CliArgs, parse_args};
+use log::{error, info, warn};
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     dotenv::dotenv().ok();
 
     let args: CliArgs = parse_args().unwrap_or_else(|e: CliError| {
@@ -24,45 +16,56 @@ async fn main() {
     });
 
     info!("Contract path: {}", args.contract_path.display());
+    info!("Salt: {}", args.salt);
 
-    // Read private key once, share across all spawned tasks
     let private_key: String = std::env::var(Constants::PRIVATE_KEY_ENV).unwrap_or_else(|_| {
-        eprintln!("Error: {} environment variable not set", Constants::PRIVATE_KEY_ENV);
+        eprintln!(
+            "Error: {} environment variable not set",
+            Constants::PRIVATE_KEY_ENV
+        );
         std::process::exit(1);
     });
 
-    // Spawn all WalletClient creations in parallel
-    let mut handles: Vec<JoinHandle<Result<WalletClient, deterministic_deployer_evm::types::errors::WalletError>>> = Vec::with_capacity(args.chains.len());
-
+    let mut deployers: Vec<WalletClient> = Vec::with_capacity(args.chains.len());
     for chain in &args.chains {
-        let network: &'static str = chain.network();
-        let chain_key: &'static str = chain.as_rpc_key();
-        let pk: String = private_key.clone();
-
-        handles.push(tokio::spawn(async move {
-            WalletClient::new(network, chain_key, &pk).await
-        }));
-    }
-
-    // Await in order — tasks already run concurrently
-    let mut deployers: Vec<WalletClient> = Vec::with_capacity(handles.len());
-
-    for (handle, chain) in handles.into_iter().zip(&args.chains) {
-        match handle.await {
-            Ok(Ok(wallet)) => {
+        match WalletClient::new(chain.network(), chain.as_rpc_key(), &private_key) {
+            Ok(wallet) => {
                 info!("Created deployer for {} — {}", chain, wallet.address());
                 deployers.push(wallet);
             }
-            Ok(Err(e)) => {
-                error!("Failed to create deployer for {chain}: {e}");
-                std::process::exit(1);
-            }
             Err(e) => {
-                error!("Task panicked for {chain}: {e}");
+                error!("Failed to create deployer for {chain}: {e}");
                 std::process::exit(1);
             }
         }
     }
 
+    let total = deployers.len();
+    let mut funded: Vec<WalletClient> = Vec::with_capacity(total);
+    for deployer in deployers {
+        match check_balance(&deployer).await {
+            Ok(balance) => {
+                info!("Balance for {}: {balance}", deployer.address());
+                funded.push(deployer);
+            }
+            Err(e) => {
+                warn!("Skipping deployer — {e}");
+            }
+        }
+    }
+
+    if funded.is_empty() {
+        error!("No deployers with sufficient balance — aborting");
+        std::process::exit(1);
+    }
+
+    if funded.len() < total {
+        warn!(
+            "{} of {total} deployers skipped (zero balance)",
+            total - funded.len()
+        );
+    }
+
+    let deployers: Vec<WalletClient> = funded;
     info!("All {} deployers ready", deployers.len());
 }

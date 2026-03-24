@@ -1,4 +1,4 @@
-// ── RPC Config Errors ────────────────────────────────────
+use alloy::primitives::Address;
 
 #[derive(Debug)]
 pub enum RpcError {
@@ -35,8 +35,6 @@ impl From<toml::de::Error> for RpcError {
     }
 }
 
-// ── Wallet Errors ────────────────────────────────────────
-
 #[derive(Debug)]
 pub enum WalletError {
     EnvVarMissing(&'static str),
@@ -57,8 +55,6 @@ impl std::fmt::Display for WalletError {
 }
 
 impl std::error::Error for WalletError {}
-
-// ── Public Client Errors ─────────────────────────────────
 
 #[derive(Debug)]
 pub enum PublicClientError {
@@ -85,14 +81,13 @@ impl From<RpcError> for PublicClientError {
     }
 }
 
-// ── CLI Errors ──────────────────────────────────────────
-
 #[derive(Debug)]
 pub enum CliError {
     MissingContractPath,
     NoChainsSelected,
     UnknownFlag(String),
     ParseError(String),
+    InvalidSalt(String),
 }
 
 impl std::fmt::Display for CliError {
@@ -102,8 +97,34 @@ impl std::fmt::Display for CliError {
             CliError::NoChainsSelected => write!(f, "No chains selected"),
             CliError::UnknownFlag(flag) => write!(f, "Unknown flag: --{flag}"),
             CliError::ParseError(e) => write!(f, "Parse error: {e}"),
+            CliError::InvalidSalt(e) => write!(f, "Invalid salt: {e}"),
         }
     }
 }
 
 impl std::error::Error for CliError {}
+
+#[derive(Debug)]
+pub enum BalanceCheckerError {
+    BalanceZero(Address),
+    NoProvider(Address),
+    CantGetBalance(String, Address),
+}
+
+impl std::fmt::Display for BalanceCheckerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BalanceCheckerError::BalanceZero(address) => {
+                write!(f, "Balance is zero for {address}")
+            }
+            BalanceCheckerError::NoProvider(address) => {
+                write!(f, "No provider attached for {address}")
+            }
+            BalanceCheckerError::CantGetBalance(e, address) => {
+                write!(f, "Can't check balance for {address}: {e}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for BalanceCheckerError {}

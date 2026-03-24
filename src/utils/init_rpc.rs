@@ -42,11 +42,7 @@ pub fn load_config() -> Result<RpcConfig, RpcError> {
     Ok(config)
 }
 
-pub async fn get_rpc<'a>(
-    config: &'a RpcConfig,
-    network: &str,
-    chain: &str,
-) -> Result<&'a str, RpcError> {
+pub fn get_rpc<'a>(config: &'a RpcConfig, network: &str, chain: &str) -> Result<&'a str, RpcError> {
     let table = _validate_network(config, network)?;
     _validate_chain(table, chain, network)
 }

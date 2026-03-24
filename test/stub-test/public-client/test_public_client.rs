@@ -6,7 +6,7 @@ use deterministic_deployer_evm::client::public_client::PublicClient;
 
 #[tokio::test]
 async fn test_new_mainnet_ethereum() {
-    let client = PublicClient::new_public_provider("mainnet", "ethereum").await;
+    let client = PublicClient::new_public_provider("mainnet", "ethereum");
     assert!(client.is_ok(), "should connect to mainnet ethereum");
     let client = client.unwrap();
     let chain_id = client.get_chain_id().await.unwrap();
@@ -15,7 +15,7 @@ async fn test_new_mainnet_ethereum() {
 
 #[tokio::test]
 async fn test_new_mainnet_base() {
-    let client = PublicClient::new_public_provider("mainnet", "base").await;
+    let client = PublicClient::new_public_provider("mainnet", "base");
     assert!(client.is_ok(), "should connect to mainnet base");
     let client = client.unwrap();
     let chain_id = client.get_chain_id().await.unwrap();
@@ -24,7 +24,7 @@ async fn test_new_mainnet_base() {
 
 #[tokio::test]
 async fn test_new_testnet_sepolia() {
-    let client = PublicClient::new_public_provider("testnet", "sepolia").await;
+    let client = PublicClient::new_public_provider("testnet", "sepolia");
     assert!(client.is_ok(), "should connect to testnet sepolia");
     let client = client.unwrap();
     let chain_id = client.get_chain_id().await.unwrap();
@@ -33,13 +33,13 @@ async fn test_new_testnet_sepolia() {
 
 #[tokio::test]
 async fn test_new_invalid_chain() {
-    let result = PublicClient::new_public_provider("mainnet", "nonexistent").await;
+    let result = PublicClient::new_public_provider("mainnet", "nonexistent");
     assert!(result.is_err(), "should fail for unknown chain");
 }
 
 #[tokio::test]
 async fn test_new_invalid_network() {
-    let result = PublicClient::new_public_provider("devnet", "ethereum").await;
+    let result = PublicClient::new_public_provider("devnet", "ethereum");
     assert!(result.is_err(), "should fail for unknown network");
 }
 
@@ -110,9 +110,7 @@ async fn test_get_code_contract() {
 
 #[tokio::test]
 async fn test_accessors() {
-    let client = PublicClient::new_public_provider("mainnet", "ethereum")
-        .await
-        .unwrap();
+    let client = PublicClient::new_public_provider("mainnet", "ethereum").unwrap();
     assert_eq!(client.chain(), "ethereum");
     assert_eq!(client.network(), "mainnet");
     assert_eq!(client.rpc_url(), "https://ethereum-rpc.publicnode.com");

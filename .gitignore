@@ -4,3 +4,7 @@ CLAUDE.md
 .env
 planning/
 src/bin
+lib/
+foundry.lock
+cache/*
+out/
