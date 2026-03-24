@@ -1,3 +1,5 @@
+use alloy::primitives::Address;
+
 #[derive(Debug)]
 pub enum RpcError {
     IoError(std::io::Error),       // wraps the real I/O error
@@ -101,3 +103,24 @@ impl std::fmt::Display for CliError {
 }
 
 impl std::error::Error for CliError {}
+
+#[derive(Debug)]
+pub enum BalanceCheckerError {
+    BalanceZero(Address),
+    CantGetBalance(String, Address),
+}
+
+impl std::fmt::Display for BalanceCheckerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BalanceCheckerError::BalanceZero(address) => {
+                write!(f, "Balance is zero for {address}")
+            }
+            BalanceCheckerError::CantGetBalance(e, address) => {
+                write!(f, "Can't check balance for {address}: {e}")
+            }
+        }
+    }
+}
+
+impl std::error::Error for BalanceCheckerError {}

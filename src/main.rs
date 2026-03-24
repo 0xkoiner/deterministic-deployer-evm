@@ -1,8 +1,9 @@
 use deterministic_deployer_evm::client::wallet_client::WalletClient;
+use deterministic_deployer_evm::helpers::balance_checker::check_balance;
 use deterministic_deployer_evm::types::constants::Constants;
 use deterministic_deployer_evm::types::errors::CliError;
 use deterministic_deployer_evm::utils::read_buf::{CliArgs, parse_args};
-use log::{error, info};
+use log::{error, info, warn};
 
 #[tokio::main]
 async fn main() {
@@ -40,5 +41,33 @@ async fn main() {
         }
     }
 
+    // Check balances — drop deployers with zero balance, keep the rest
+    let total = deployers.len();
+    let mut funded: Vec<WalletClient> = Vec::with_capacity(total);
+    for deployer in deployers {
+        match check_balance(&deployer).await {
+            Ok(balance) => {
+                info!("Balance for {}: {balance}", deployer.address());
+                funded.push(deployer);
+            }
+            Err(e) => {
+                warn!("Skipping deployer — {e}");
+            }
+        }
+    }
+
+    if funded.is_empty() {
+        error!("No deployers with sufficient balance — aborting");
+        std::process::exit(1);
+    }
+
+    if funded.len() < total {
+        warn!(
+            "{} of {total} deployers skipped (zero balance)",
+            total - funded.len()
+        );
+    }
+
+    let deployers = funded;
     info!("All {} deployers ready", deployers.len());
 }
