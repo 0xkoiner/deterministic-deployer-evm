@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use alloy::primitives::{B256, U256};
+
 use crate::types::errors::CliError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -150,17 +152,33 @@ impl ChainSet {
     }
 }
 
+// ── Salt Parsing ───────────────────────────────────────────
+
+fn parse_salt(input: &str) -> Result<B256, CliError> {
+    // Try hex first (with or without 0x prefix)
+    if let Ok(val) = input.parse::<B256>() {
+        return Ok(val);
+    }
+
+    // Try decimal uint256 → B256
+    let num = U256::from_str_radix(input, 10)
+        .map_err(|e| CliError::InvalidSalt(format!("not valid hex or uint256: {e}")))?;
+    Ok(B256::from(num.to_be_bytes::<32>()))
+}
+
 // ── CLI Args ────────────────────────────────────────────
 
 pub struct CliArgs {
     pub contract_path: PathBuf,
     pub chains: Vec<Chain>,
+    pub salt: B256,
 }
 
 pub fn parse_args() -> Result<CliArgs, CliError> {
     use lexopt::prelude::*;
 
     let mut contract_path: Option<PathBuf> = None;
+    let mut salt: Option<B256> = None;
     let mut chains: Vec<Chain> = Vec::with_capacity(Chain::COUNT);
     let mut seen: ChainSet = ChainSet::new();
     let mut parser: lexopt::Parser = lexopt::Parser::from_env();
@@ -173,6 +191,15 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
             Short('h') | Long("help") => {
                 print_usage();
                 std::process::exit(0);
+            }
+            Long("salt") => {
+                let val = parser
+                    .value()
+                    .map_err(|e| CliError::ParseError(e.to_string()))?;
+                let val_str = val
+                    .to_str()
+                    .ok_or_else(|| CliError::InvalidSalt("invalid UTF-8".to_string()))?;
+                salt = Some(parse_salt(val_str)?);
             }
             Long(flag) => {
                 let chain: Chain = Chain::from_flag(flag)
@@ -196,6 +223,8 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
     }
 
     let contract_path: PathBuf = contract_path.ok_or(CliError::MissingContractPath)?;
+    let salt: B256 =
+        salt.ok_or_else(|| CliError::InvalidSalt("--salt is required".to_string()))?;
 
     if chains.is_empty() {
         return Err(CliError::NoChainsSelected);
@@ -204,11 +233,15 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
     Ok(CliArgs {
         contract_path,
         chains,
+        salt,
     })
 }
 
 fn print_usage() {
-    eprintln!("Usage: dd-evm <contract.sol> --chain1 [--chain2 ...]");
+    eprintln!("Usage: dd-evm <contract.sol> --salt <hex|uint256> --chain1 [--chain2 ...]");
+    eprintln!();
+    eprintln!("Options:");
+    eprintln!("  --salt <value>  CREATE2 salt (hex bytes32 or decimal uint256)");
     eprintln!();
     eprintln!("Mainnets:");
     for chain in &Chain::ALL {

@@ -15,6 +15,7 @@ async fn main() {
     });
 
     info!("Contract path: {}", args.contract_path.display());
+    info!("Salt: {}", args.salt);
 
     // Read private key once, share across all deployers
     let private_key: String = std::env::var(Constants::PRIVATE_KEY_ENV).unwrap_or_else(|_| {
