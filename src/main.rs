@@ -7,7 +7,7 @@ use log::{error, info, warn};
 
 #[tokio::main]
 async fn main() {
-    env_logger::init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     dotenv::dotenv().ok();
 
     let args: CliArgs = parse_args().unwrap_or_else(|e: CliError| {
@@ -18,7 +18,6 @@ async fn main() {
     info!("Contract path: {}", args.contract_path.display());
     info!("Salt: {}", args.salt);
 
-    // Read private key once, share across all deployers
     let private_key: String = std::env::var(Constants::PRIVATE_KEY_ENV).unwrap_or_else(|_| {
         eprintln!(
             "Error: {} environment variable not set",
@@ -41,7 +40,6 @@ async fn main() {
         }
     }
 
-    // Check balances — drop deployers with zero balance, keep the rest
     let total = deployers.len();
     let mut funded: Vec<WalletClient> = Vec::with_capacity(total);
     for deployer in deployers {
@@ -68,6 +66,6 @@ async fn main() {
         );
     }
 
-    let deployers = funded;
+    let deployers: Vec<WalletClient> = funded;
     info!("All {} deployers ready", deployers.len());
 }

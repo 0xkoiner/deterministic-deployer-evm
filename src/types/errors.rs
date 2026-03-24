@@ -107,6 +107,7 @@ impl std::error::Error for CliError {}
 #[derive(Debug)]
 pub enum BalanceCheckerError {
     BalanceZero(Address),
+    NoProvider(Address),
     CantGetBalance(String, Address),
 }
 
@@ -115,6 +116,9 @@ impl std::fmt::Display for BalanceCheckerError {
         match self {
             BalanceCheckerError::BalanceZero(address) => {
                 write!(f, "Balance is zero for {address}")
+            }
+            BalanceCheckerError::NoProvider(address) => {
+                write!(f, "No provider attached for {address}")
             }
             BalanceCheckerError::CantGetBalance(e, address) => {
                 write!(f, "Can't check balance for {address}: {e}")

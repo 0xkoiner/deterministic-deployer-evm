@@ -1,21 +1,18 @@
-use alloy::primitives::U256;
+use alloy::primitives::{U256, Address, Uint};
+
+use crate::client::public_client::PublicClient;
 
 use crate::client::wallet_client::WalletClient;
 use crate::types::errors::BalanceCheckerError;
 
-/// Checks that the wallet has a non-zero native balance on its connected chain.
-/// Returns the balance on success, or a hard error if zero or unreachable.
 pub async fn check_balance(wallet: &WalletClient) -> Result<U256, BalanceCheckerError> {
-    let address = wallet.address();
+    let address: Address = wallet.address();
 
-    let public = wallet.public().ok_or_else(|| {
-        BalanceCheckerError::CantGetBalance(
-            "WalletClient has no provider — use new() or from_env_with_provider()".to_string(),
-            address,
-        )
-    })?;
+    let public: &PublicClient = wallet
+        .public()
+        .ok_or(BalanceCheckerError::NoProvider(address))?;
 
-    let balance = public
+    let balance: Uint<256, 4> = public
         .get_balance(address)
         .await
         .map_err(|e| BalanceCheckerError::CantGetBalance(e.to_string(), address))?;
