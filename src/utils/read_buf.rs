@@ -1,8 +1,8 @@
 use std::ffi::OsString;
 use std::path::PathBuf;
 
-use alloy::primitives::{Address, B256, U256, Uint};
 use crate::types::errors::CliError;
+use alloy::primitives::{Address, B256, U256};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
@@ -66,15 +66,15 @@ impl Chain {
             "sonic" => Some(Chain::Sonic),
             "optimism" => Some(Chain::Optimism),
             "zora" => Some(Chain::Zora),
-            "arbitrum-nova" => Some(Chain::ArbitrumNova),
-            "polygon-zkevm" => Some(Chain::PolygonZkevm),
+            "arbitrum-nova" | "arbitrum_nova" => Some(Chain::ArbitrumNova),
+            "polygon-zkevm" | "polygon_zkevm" => Some(Chain::PolygonZkevm),
             "gnosis" => Some(Chain::Gnosis),
             "scroll" => Some(Chain::Scroll),
             "linea" => Some(Chain::Linea),
             "sepolia" => Some(Chain::Sepolia),
-            "base-sepolia" => Some(Chain::BaseSepolia),
-            "arbitrum-sepolia" => Some(Chain::ArbitrumSepolia),
-            "optimism-sepolia" => Some(Chain::OptimismSepolia),
+            "base-sepolia" | "base_sepolia" => Some(Chain::BaseSepolia),
+            "arbitrum-sepolia" | "arbitrum_sepolia" => Some(Chain::ArbitrumSepolia),
+            "optimism-sepolia" | "optimism_sepolia" => Some(Chain::OptimismSepolia),
             _ => None,
         }
     }
@@ -159,7 +159,7 @@ fn parse_salt(input: &str) -> Result<B256, CliError> {
     }
 
     // Try decimal uint256 → B256
-    let num: Uint<256, 4>  = U256::from_str_radix(input, 10)
+    let num: U256 = U256::from_str_radix(input, 10)
         .map_err(|e| CliError::InvalidSalt(format!("not valid hex or uint256: {e}")))?;
     Ok(B256::from(num.to_be_bytes::<32>()))
 }
@@ -209,9 +209,7 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
                     .map_err(|e| CliError::ParseError(e.to_string()))?;
                 let val_str = val
                     .to_str()
-                    .ok_or_else(|| {
-                        CliError::InvalidContractName("invalid UTF-8".to_string())
-                    })?;
+                    .ok_or_else(|| CliError::InvalidContractName("invalid UTF-8".to_string()))?;
                 contract_name = Some(val_str.to_string());
             }
             Long("verify") => {

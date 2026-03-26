@@ -1,5 +1,4 @@
 use std::env::var;
-use std::ops::Deref;
 
 use alloy::primitives::Address;
 use alloy::signers::local::PrivateKeySigner;
@@ -37,7 +36,11 @@ impl WalletClient {
         })
     }
 
-    pub fn new(network: &str, chain: &str, private_key: &str) -> Result<Self, WalletError> {
+    pub fn new(
+        network: &'static str,
+        chain: &'static str,
+        private_key: &str,
+    ) -> Result<Self, WalletError> {
         let signer: PrivateKeySigner = parse_signer(private_key)?;
         let public: PublicClient = PublicClient::new_public_provider(network, chain)
             .map_err(|e: PublicClientError| WalletError::SignerError(e.to_string()))?;
@@ -47,7 +50,10 @@ impl WalletClient {
         })
     }
 
-    pub fn from_env_with_provider(network: &str, chain: &str) -> Result<Self, WalletError> {
+    pub fn from_env_with_provider(
+        network: &'static str,
+        chain: &'static str,
+    ) -> Result<Self, WalletError> {
         let key: String = var(Constants::PRIVATE_KEY_ENV)
             .map_err(|_| WalletError::EnvVarMissing(Constants::PRIVATE_KEY_ENV))?;
         Self::new(network, chain, &key)
@@ -66,15 +72,5 @@ impl WalletClient {
     #[inline]
     pub fn public(&self) -> Option<&PublicClient> {
         self.public.as_ref()
-    }
-}
-
-impl Deref for WalletClient {
-    type Target = PublicClient;
-
-    fn deref(&self) -> &PublicClient {
-        self.public
-            .as_ref()
-            .expect("WalletClient has no provider — use new() or from_env_with_provider() instead")
     }
 }

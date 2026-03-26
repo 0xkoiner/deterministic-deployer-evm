@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use alloy::eips::BlockNumberOrTag;
 use alloy::primitives::{Address, B256, Bytes, U256};
 use alloy::providers::{DynProvider, Provider, ProviderBuilder};
@@ -14,20 +16,23 @@ fn map_provider_err(e: impl std::fmt::Display) -> PublicClientError {
 #[derive(Debug)]
 pub struct PublicClient {
     provider: DynProvider,
-    chain: String,
-    network: String,
-    rpc_url: String,
+    chain: &'static str,
+    network: &'static str,
+    rpc_url: Cow<'static, str>,
 }
 
 impl PublicClient {
-    pub fn new_public_provider(network: &str, chain: &str) -> Result<Self, PublicClientError> {
+    pub fn new_public_provider(
+        network: &'static str,
+        chain: &'static str,
+    ) -> Result<Self, PublicClientError> {
         Self::new_with_config(config(), network, chain)
     }
 
     pub fn new_with_config(
-        config: &RpcConfig,
-        network: &str,
-        chain: &str,
+        config: &'static RpcConfig,
+        network: &'static str,
+        chain: &'static str,
     ) -> Result<Self, PublicClientError> {
         let rpc_url: &str =
             get_rpc(config, network, chain).map_err(PublicClientError::RpcConfig)?;
@@ -42,9 +47,9 @@ impl PublicClient {
 
         Ok(Self {
             provider,
-            chain: chain.to_string(),
-            network: network.to_string(),
-            rpc_url: rpc_url.to_string(),
+            chain,
+            network,
+            rpc_url: Cow::Borrowed(rpc_url),
         })
     }
 
@@ -59,9 +64,9 @@ impl PublicClient {
 
         Ok(Self {
             provider,
-            chain: String::new(),
-            network: String::new(),
-            rpc_url: rpc_url.to_string(),
+            chain: "",
+            network: "",
+            rpc_url: Cow::Owned(rpc_url.to_string()),
         })
     }
 
@@ -155,12 +160,12 @@ impl PublicClient {
 
     #[inline]
     pub fn chain(&self) -> &str {
-        &self.chain
+        self.chain
     }
 
     #[inline]
     pub fn network(&self) -> &str {
-        &self.network
+        self.network
     }
 
     #[inline]
