@@ -2,5 +2,23 @@
 src = "contracts"
 out = "out"
 libs = ["lib"]
+solc = "0.8.34"
+evm_version = "prague"
+bytecode_hash = "none"
+cbor_metadata = false
+always_use_create_2_factory = true
+
+[lint]
+lint_on_build = false
+
+[fmt]
+bracket_spacing = true
+int_types = "long"
+line_length = 120
+multiline_func_header = "all"
+number_underscore = "thousands"
+quote_style = "double"
+tab_width = 4
+wrap_comments = true
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

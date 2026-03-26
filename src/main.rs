@@ -1,3 +1,4 @@
+use deterministic_deployer_evm::data::contracts::{ContractSpec, find_by_name};
 use deterministic_deployer_evm::client::wallet_client::WalletClient;
 use deterministic_deployer_evm::helpers::balance_checker::check_balance;
 use deterministic_deployer_evm::types::constants::Constants;
@@ -15,8 +16,21 @@ async fn main() {
         std::process::exit(1);
     });
 
-    info!("Contract path: {}", args.contract_path.display());
-    info!("Salt: {}", args.salt);
+    if let Some(ref contract_path) = args.contract_path {
+        info!("Contract path: {}", contract_path.display());
+    }
+    if let Some(salt) = args.salt {
+        info!("Salt: {salt}");
+    }
+    if let Some(ref contract_name) = args.contract_name {
+        info!("Contract name: {contract_name}");
+    }
+    if let Some(address) = args.address {
+        info!("Address: {address}");
+    }
+    if args.verify {
+        info!("Verify: true");
+    }
 
     let private_key: String = std::env::var(Constants::PRIVATE_KEY_ENV).unwrap_or_else(|_| {
         eprintln!(
@@ -40,8 +54,23 @@ async fn main() {
         }
     }
 
-    let total = deployers.len();
+    let total: usize = deployers.len();
     let mut funded: Vec<WalletClient> = Vec::with_capacity(total);
+
+    let contract_to_deploy: Option<&ContractSpec> =
+        args.contract_name.as_deref().and_then(find_by_name);
+
+    if let Some(spec) = contract_to_deploy {
+        info!("Resolved contract: {}", spec.name);
+        info!("Address contract: {:?}", spec.address);
+        info!("Path contract: {:?}", spec.path);
+        info!("verify_json_path contract: {:?}", spec.verify_json_path);
+        info!("salt contract: {:?}", spec.salt);
+    } else if let Some(ref name) = args.contract_name {
+        error!("Contract not found: {name}");
+        std::process::exit(1);
+    }
+
     for deployer in deployers {
         match check_balance(&deployer).await {
             Ok(balance) => {

@@ -1,7 +1,7 @@
+use std::ffi::OsString;
 use std::path::PathBuf;
 
-use alloy::primitives::{B256, U256};
-
+use alloy::primitives::{Address, B256, U256, Uint};
 use crate::types::errors::CliError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -152,8 +152,6 @@ impl ChainSet {
     }
 }
 
-// ── Salt Parsing ───────────────────────────────────────────
-
 fn parse_salt(input: &str) -> Result<B256, CliError> {
     // Try hex first (with or without 0x prefix)
     if let Ok(val) = input.parse::<B256>() {
@@ -161,17 +159,18 @@ fn parse_salt(input: &str) -> Result<B256, CliError> {
     }
 
     // Try decimal uint256 → B256
-    let num = U256::from_str_radix(input, 10)
+    let num: Uint<256, 4>  = U256::from_str_radix(input, 10)
         .map_err(|e| CliError::InvalidSalt(format!("not valid hex or uint256: {e}")))?;
     Ok(B256::from(num.to_be_bytes::<32>()))
 }
 
-// ── CLI Args ────────────────────────────────────────────
-
 pub struct CliArgs {
-    pub contract_path: PathBuf,
+    pub contract_path: Option<PathBuf>,
     pub chains: Vec<Chain>,
-    pub salt: B256,
+    pub salt: Option<B256>,
+    pub contract_name: Option<String>,
+    pub address: Option<Address>,
+    pub verify: bool,
 }
 
 pub fn parse_args() -> Result<CliArgs, CliError> {
@@ -179,6 +178,9 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
 
     let mut contract_path: Option<PathBuf> = None;
     let mut salt: Option<B256> = None;
+    let mut contract_name: Option<String> = None;
+    let mut address: Option<Address> = None;
+    let mut verify: bool = false;
     let mut chains: Vec<Chain> = Vec::with_capacity(Chain::COUNT);
     let mut seen: ChainSet = ChainSet::new();
     let mut parser: lexopt::Parser = lexopt::Parser::from_env();
@@ -193,13 +195,40 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
                 std::process::exit(0);
             }
             Long("salt") => {
-                let val = parser
+                let val: std::ffi::OsString = parser
                     .value()
                     .map_err(|e| CliError::ParseError(e.to_string()))?;
                 let val_str = val
                     .to_str()
                     .ok_or_else(|| CliError::InvalidSalt("invalid UTF-8".to_string()))?;
                 salt = Some(parse_salt(val_str)?);
+            }
+            Long("contract-name") => {
+                let val: OsString = parser
+                    .value()
+                    .map_err(|e| CliError::ParseError(e.to_string()))?;
+                let val_str = val
+                    .to_str()
+                    .ok_or_else(|| {
+                        CliError::InvalidContractName("invalid UTF-8".to_string())
+                    })?;
+                contract_name = Some(val_str.to_string());
+            }
+            Long("verify") => {
+                verify = true;
+            }
+            Long("address") => {
+                let val: OsString = parser
+                    .value()
+                    .map_err(|e| CliError::ParseError(e.to_string()))?;
+                let val_str = val
+                    .to_str()
+                    .ok_or_else(|| CliError::InvalidAddress("invalid UTF-8".to_string()))?;
+                address = Some(
+                    val_str
+                        .parse::<Address>()
+                        .map_err(|e| CliError::InvalidAddress(e.to_string()))?,
+                );
             }
             Long(flag) => {
                 let chain: Chain = Chain::from_flag(flag)
@@ -222,10 +251,6 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
         }
     }
 
-    let contract_path: PathBuf = contract_path.ok_or(CliError::MissingContractPath)?;
-    let salt: B256 =
-        salt.ok_or_else(|| CliError::InvalidSalt("--salt is required".to_string()))?;
-
     if chains.is_empty() {
         return Err(CliError::NoChainsSelected);
     }
@@ -234,6 +259,9 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
         contract_path,
         chains,
         salt,
+        contract_name,
+        address,
+        verify,
     })
 }
 
@@ -242,6 +270,9 @@ fn print_usage() {
     eprintln!();
     eprintln!("Options:");
     eprintln!("  --salt <value>  CREATE2 salt (hex bytes32 or decimal uint256)");
+    eprintln!("  --contract-name <name>  Contract name (e.g. ERC20)");
+    eprintln!("  --address <hex>         Contract address (hex, with or without 0x)");
+    eprintln!("  --verify                Enable contract verification");
     eprintln!();
     eprintln!("Mainnets:");
     for chain in &Chain::ALL {

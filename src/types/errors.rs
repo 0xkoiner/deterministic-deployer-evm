@@ -88,6 +88,8 @@ pub enum CliError {
     UnknownFlag(String),
     ParseError(String),
     InvalidSalt(String),
+    InvalidContractName(String),
+    InvalidAddress(String),
 }
 
 impl std::fmt::Display for CliError {
@@ -98,6 +100,8 @@ impl std::fmt::Display for CliError {
             CliError::UnknownFlag(flag) => write!(f, "Unknown flag: --{flag}"),
             CliError::ParseError(e) => write!(f, "Parse error: {e}"),
             CliError::InvalidSalt(e) => write!(f, "Invalid salt: {e}"),
+            CliError::InvalidContractName(e) => write!(f, "Invalid contract name: {e}"),
+            CliError::InvalidAddress(e) => write!(f, "Invalid address: {e}"),
         }
     }
 }
