@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.29;
 
-import {Script, console2 as console} from "lib/forge-std/src/Script.sol";
-import {ERC20Mock} from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
+import { Script, console2 as console } from "lib/forge-std/src/Script.sol";
+import { ERC20Mock } from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 
 contract DeployMockERC20 is Script {
     bytes32 constant salt = 0x00000000000000000000000000000000000000000000000000000000e90d2d90;
