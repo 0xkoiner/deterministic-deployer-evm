@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use alloy::primitives::{B256, U256};
+use alloy::primitives::{Address, B256, U256};
 
 use crate::types::errors::CliError;
 
@@ -173,6 +173,7 @@ pub struct CliArgs {
     pub chains: Vec<Chain>,
     pub salt: Option<B256>,
     pub contract_name: Option<String>,
+    pub address: Option<Address>,
 }
 
 pub fn parse_args() -> Result<CliArgs, CliError> {
@@ -181,6 +182,7 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
     let mut contract_path: Option<PathBuf> = None;
     let mut salt: Option<B256> = None;
     let mut contract_name: Option<String> = None;
+    let mut address: Option<Address> = None;
     let mut chains: Vec<Chain> = Vec::with_capacity(Chain::COUNT);
     let mut seen: ChainSet = ChainSet::new();
     let mut parser: lexopt::Parser = lexopt::Parser::from_env();
@@ -214,6 +216,19 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
                     })?;
                 contract_name = Some(val_str.to_string());
             }
+            Long("address") => {
+                let val = parser
+                    .value()
+                    .map_err(|e| CliError::ParseError(e.to_string()))?;
+                let val_str = val
+                    .to_str()
+                    .ok_or_else(|| CliError::InvalidAddress("invalid UTF-8".to_string()))?;
+                address = Some(
+                    val_str
+                        .parse::<Address>()
+                        .map_err(|e| CliError::InvalidAddress(e.to_string()))?,
+                );
+            }
             Long(flag) => {
                 let chain: Chain = Chain::from_flag(flag)
                     .ok_or_else(|| CliError::UnknownFlag(flag.to_string()))?;
@@ -244,6 +259,7 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
         chains,
         salt,
         contract_name,
+        address,
     })
 }
 
@@ -253,6 +269,7 @@ fn print_usage() {
     eprintln!("Options:");
     eprintln!("  --salt <value>  CREATE2 salt (hex bytes32 or decimal uint256)");
     eprintln!("  --contract-name <name>  Contract name (e.g. ERC20)");
+    eprintln!("  --address <hex>         Contract address (hex, with or without 0x)");
     eprintln!();
     eprintln!("Mainnets:");
     for chain in &Chain::ALL {
