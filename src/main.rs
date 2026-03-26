@@ -1,4 +1,5 @@
-use deterministic_deployer_evm::data::contracts::{ContractSpec, find_by_name};
+use deterministic_deployer_evm::data::contracts::ContractSpec;
+use deterministic_deployer_evm::helpers::contract_searcher::resolve_contract;
 use deterministic_deployer_evm::client::wallet_client::WalletClient;
 use deterministic_deployer_evm::helpers::balance_checker::check_balance;
 use deterministic_deployer_evm::types::constants::Constants;
@@ -57,8 +58,7 @@ async fn main() {
     let total: usize = deployers.len();
     let mut funded: Vec<WalletClient> = Vec::with_capacity(total);
 
-    let contract_to_deploy: Option<&ContractSpec> =
-        args.contract_name.as_deref().and_then(find_by_name);
+    let contract_to_deploy: Option<&ContractSpec> = resolve_contract(&args);
 
     if let Some(spec) = contract_to_deploy {
         info!("Resolved contract: {}", spec.name);
@@ -66,8 +66,8 @@ async fn main() {
         info!("Path contract: {:?}", spec.path);
         info!("verify_json_path contract: {:?}", spec.verify_json_path);
         info!("salt contract: {:?}", spec.salt);
-    } else if let Some(ref name) = args.contract_name {
-        error!("Contract not found: {name}");
+    } else if args.contract_name.is_some() || args.address.is_some() || args.contract_path.is_some() {
+        error!("Contract not found in registry");
         std::process::exit(1);
     }
 

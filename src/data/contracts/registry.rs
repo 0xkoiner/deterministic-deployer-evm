@@ -37,6 +37,11 @@ pub fn find_by_address(addr: &Address) -> Option<&'static ContractSpec> {
     CONTRACTS.iter().find(|c: &&ContractSpec| c.address.as_ref() == Some(addr))
 }
 
+#[inline]
+pub fn find_by_path(path: &str) -> Option<&'static ContractSpec> {
+    CONTRACTS.iter().find(|c: &&ContractSpec| c.path == Some(path))
+}
+
 pub struct DeploymentTracker {
     deployed: HashMap<&'static str, bool>,
 }
