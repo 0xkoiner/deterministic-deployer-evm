@@ -28,6 +28,9 @@ async fn main() {
     if let Some(address) = args.address {
         info!("Address: {address}");
     }
+    if args.verify {
+        info!("Verify: true");
+    }
 
     let private_key: String = std::env::var(Constants::PRIVATE_KEY_ENV).unwrap_or_else(|_| {
         eprintln!(
