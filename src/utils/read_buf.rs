@@ -169,9 +169,10 @@ fn parse_salt(input: &str) -> Result<B256, CliError> {
 // ── CLI Args ────────────────────────────────────────────
 
 pub struct CliArgs {
-    pub contract_path: PathBuf,
+    pub contract_path: Option<PathBuf>,
     pub chains: Vec<Chain>,
     pub salt: Option<B256>,
+    pub contract_name: Option<String>,
 }
 
 pub fn parse_args() -> Result<CliArgs, CliError> {
@@ -179,6 +180,7 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
 
     let mut contract_path: Option<PathBuf> = None;
     let mut salt: Option<B256> = None;
+    let mut contract_name: Option<String> = None;
     let mut chains: Vec<Chain> = Vec::with_capacity(Chain::COUNT);
     let mut seen: ChainSet = ChainSet::new();
     let mut parser: lexopt::Parser = lexopt::Parser::from_env();
@@ -201,6 +203,17 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
                     .ok_or_else(|| CliError::InvalidSalt("invalid UTF-8".to_string()))?;
                 salt = Some(parse_salt(val_str)?);
             }
+            Long("contract-name") => {
+                let val = parser
+                    .value()
+                    .map_err(|e| CliError::ParseError(e.to_string()))?;
+                let val_str = val
+                    .to_str()
+                    .ok_or_else(|| {
+                        CliError::InvalidContractName("invalid UTF-8".to_string())
+                    })?;
+                contract_name = Some(val_str.to_string());
+            }
             Long(flag) => {
                 let chain: Chain = Chain::from_flag(flag)
                     .ok_or_else(|| CliError::UnknownFlag(flag.to_string()))?;
@@ -222,8 +235,6 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
         }
     }
 
-    let contract_path: PathBuf = contract_path.ok_or(CliError::MissingContractPath)?;
-
     if chains.is_empty() {
         return Err(CliError::NoChainsSelected);
     }
@@ -232,6 +243,7 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
         contract_path,
         chains,
         salt,
+        contract_name,
     })
 }
 
@@ -240,6 +252,7 @@ fn print_usage() {
     eprintln!();
     eprintln!("Options:");
     eprintln!("  --salt <value>  CREATE2 salt (hex bytes32 or decimal uint256)");
+    eprintln!("  --contract-name <name>  Contract name (e.g. ERC20)");
     eprintln!();
     eprintln!("Mainnets:");
     for chain in &Chain::ALL {

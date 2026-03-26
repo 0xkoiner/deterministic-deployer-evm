@@ -15,9 +15,14 @@ async fn main() {
         std::process::exit(1);
     });
 
-    info!("Contract path: {}", args.contract_path.display());
+    if let Some(ref contract_path) = args.contract_path {
+        info!("Contract path: {}", contract_path.display());
+    }
     if let Some(salt) = args.salt {
         info!("Salt: {salt}");
+    }
+    if let Some(ref contract_name) = args.contract_name {
+        info!("Contract name: {contract_name}");
     }
 
     let private_key: String = std::env::var(Constants::PRIVATE_KEY_ENV).unwrap_or_else(|_| {
