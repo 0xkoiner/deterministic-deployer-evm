@@ -1,134 +1,63 @@
 use alloy::primitives::Address;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum RpcError {
-    IoError(std::io::Error),       // wraps the real I/O error
-    ParseError(toml::de::Error),   // wraps the real TOML parse error
-    UnknownNetwork(String),        // "mainnet" or "testnet" only
-    ChainNotFound(String, String), // (chain, network)
+    #[error("Failed to read config: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("Failed to parse TOML: {0}")]
+    ParseError(#[from] toml::de::Error),
+    #[error("Unknown network: {0}")]
+    UnknownNetwork(String),
+    #[error("Chain {0} not found in {1}")]
+    ChainNotFound(String, String),
 }
 
-impl std::fmt::Display for RpcError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RpcError::IoError(e) => write!(f, "Failed to read config: {e}"),
-            RpcError::ParseError(e) => write!(f, "Failed to parse TOML: {e}"),
-            RpcError::UnknownNetwork(n) => write!(f, "Unknown network: {n}"),
-            RpcError::ChainNotFound(chain, network) => {
-                write!(f, "Chain {chain} not found in {network}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for RpcError {}
-
-impl From<std::io::Error> for RpcError {
-    fn from(e: std::io::Error) -> Self {
-        RpcError::IoError(e)
-    }
-}
-
-impl From<toml::de::Error> for RpcError {
-    fn from(e: toml::de::Error) -> Self {
-        RpcError::ParseError(e)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum WalletError {
+    #[error("Environment variable missing: {0}")]
     EnvVarMissing(&'static str),
+    #[error("Invalid private key: {0}")]
     InvalidPrivateKey(String),
+    #[error("Signer error: {0}")]
     SignerError(String),
+    #[error("Transaction failed: {0}")]
     TransactionFailed(String),
 }
 
-impl std::fmt::Display for WalletError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            WalletError::EnvVarMissing(e) => write!(f, "Environment variable missing: {e}"),
-            WalletError::InvalidPrivateKey(e) => write!(f, "Invalid private key: {e}"),
-            WalletError::SignerError(e) => write!(f, "Signer error: {e}"),
-            WalletError::TransactionFailed(e) => write!(f, "Transaction failed: {e}"),
-        }
-    }
-}
-
-impl std::error::Error for WalletError {}
-
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum PublicClientError {
-    RpcConfig(RpcError),
+    #[error("RPC config error: {0}")]
+    RpcConfig(#[from] RpcError),
+    #[error("Invalid RPC URL: {0}")]
     InvalidUrl(String),
+    #[error("Provider error: {0}")]
     ProviderError(String),
 }
 
-impl std::fmt::Display for PublicClientError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PublicClientError::RpcConfig(e) => write!(f, "RPC config error: {e}"),
-            PublicClientError::InvalidUrl(e) => write!(f, "Invalid RPC URL: {e}"),
-            PublicClientError::ProviderError(e) => write!(f, "Provider error: {e}"),
-        }
-    }
-}
-
-impl std::error::Error for PublicClientError {}
-
-impl From<RpcError> for PublicClientError {
-    fn from(e: RpcError) -> Self {
-        PublicClientError::RpcConfig(e)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum CliError {
+    #[error("Missing contract path")]
     MissingContractPath,
+    #[error("No chains selected")]
     NoChainsSelected,
+    #[error("Unknown flag: --{0}")]
     UnknownFlag(String),
+    #[error("Parse error: {0}")]
     ParseError(String),
+    #[error("Invalid salt: {0}")]
     InvalidSalt(String),
+    #[error("Invalid contract name: {0}")]
     InvalidContractName(String),
+    #[error("Invalid address: {0}")]
     InvalidAddress(String),
 }
 
-impl std::fmt::Display for CliError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CliError::MissingContractPath => write!(f, "Missing contract path"),
-            CliError::NoChainsSelected => write!(f, "No chains selected"),
-            CliError::UnknownFlag(flag) => write!(f, "Unknown flag: --{flag}"),
-            CliError::ParseError(e) => write!(f, "Parse error: {e}"),
-            CliError::InvalidSalt(e) => write!(f, "Invalid salt: {e}"),
-            CliError::InvalidContractName(e) => write!(f, "Invalid contract name: {e}"),
-            CliError::InvalidAddress(e) => write!(f, "Invalid address: {e}"),
-        }
-    }
-}
-
-impl std::error::Error for CliError {}
-
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum BalanceCheckerError {
+    #[error("Balance is zero for {0}")]
     BalanceZero(Address),
+    #[error("No provider attached for {0}")]
     NoProvider(Address),
+    #[error("Can't check balance for {1}: {0}")]
     CantGetBalance(String, Address),
 }
-
-impl std::fmt::Display for BalanceCheckerError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BalanceCheckerError::BalanceZero(address) => {
-                write!(f, "Balance is zero for {address}")
-            }
-            BalanceCheckerError::NoProvider(address) => {
-                write!(f, "No provider attached for {address}")
-            }
-            BalanceCheckerError::CantGetBalance(e, address) => {
-                write!(f, "Can't check balance for {address}: {e}")
-            }
-        }
-    }
-}
-
-impl std::error::Error for BalanceCheckerError {}

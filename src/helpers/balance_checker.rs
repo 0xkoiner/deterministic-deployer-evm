@@ -1,4 +1,4 @@
-use alloy::primitives::{U256, Address, Uint};
+use alloy::primitives::{Address, U256};
 
 use crate::client::public_client::PublicClient;
 
@@ -12,7 +12,7 @@ pub async fn check_balance(wallet: &WalletClient) -> Result<U256, BalanceChecker
         .public()
         .ok_or(BalanceCheckerError::NoProvider(address))?;
 
-    let balance: Uint<256, 4> = public
+    let balance: U256 = public
         .get_balance(address)
         .await
         .map_err(|e| BalanceCheckerError::CantGetBalance(e.to_string(), address))?;
