@@ -16,7 +16,9 @@ async fn main() {
     });
 
     info!("Contract path: {}", args.contract_path.display());
-    info!("Salt: {}", args.salt);
+    if let Some(salt) = args.salt {
+        info!("Salt: {salt}");
+    }
 
     let private_key: String = std::env::var(Constants::PRIVATE_KEY_ENV).unwrap_or_else(|_| {
         eprintln!(

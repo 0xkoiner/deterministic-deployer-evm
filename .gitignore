@@ -8,3 +8,4 @@ lib/
 foundry.lock
 cache/*
 out/
+.notes.md

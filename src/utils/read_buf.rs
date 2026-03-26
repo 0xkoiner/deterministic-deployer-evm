@@ -171,7 +171,7 @@ fn parse_salt(input: &str) -> Result<B256, CliError> {
 pub struct CliArgs {
     pub contract_path: PathBuf,
     pub chains: Vec<Chain>,
-    pub salt: B256,
+    pub salt: Option<B256>,
 }
 
 pub fn parse_args() -> Result<CliArgs, CliError> {
@@ -223,8 +223,6 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
     }
 
     let contract_path: PathBuf = contract_path.ok_or(CliError::MissingContractPath)?;
-    let salt: B256 =
-        salt.ok_or_else(|| CliError::InvalidSalt("--salt is required".to_string()))?;
 
     if chains.is_empty() {
         return Err(CliError::NoChainsSelected);
