@@ -61,3 +61,11 @@ pub enum BalanceCheckerError {
     #[error("Can't check balance for {1}: {0}")]
     CantGetBalance(String, Address),
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum CodeCheckerError {
+    #[error("No provider attached for {0}")]
+    NoProvider(Address),
+    #[error("Can't fetch code for {1}: {0}")]
+    ProviderError(String, Address),
+}

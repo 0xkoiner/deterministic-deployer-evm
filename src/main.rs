@@ -2,6 +2,7 @@ use deterministic_deployer_evm::client::wallet_client::WalletClient;
 use deterministic_deployer_evm::data::contracts::ContractSpec;
 use deterministic_deployer_evm::helpers::balance_checker::check_balance;
 use deterministic_deployer_evm::helpers::contract_searcher::resolve_contract;
+use deterministic_deployer_evm::helpers::code_checker::has_code;
 use deterministic_deployer_evm::types::constants::Constants;
 use deterministic_deployer_evm::types::errors::CliError;
 use deterministic_deployer_evm::utils::read_buf::{CliArgs, parse_args};
@@ -74,6 +75,20 @@ async fn main() {
 
     let mut join_set = tokio::task::JoinSet::new();
     for deployer in deployers {
+        match has_code(&deployer, *Constants::DETERMINISTIC_DEPLOYER).await {
+            Ok(true) => {
+                info!("Deterministic deployer contract found for {}", Constants::DETERMINISTIC_DEPLOYER);
+            }
+            Ok(false) => {
+                warn!("Deterministic deployer contract NOT found for {} — skipping", Constants::DETERMINISTIC_DEPLOYER);
+                continue;
+            }
+            Err(e) => {
+                error!("Failed to check deployer contract code for {}: {e}", Constants::DETERMINISTIC_DEPLOYER);
+                continue;
+            }
+        }
+
         join_set.spawn(async move {
             let result = check_balance(&deployer).await;
             (deployer, result)
