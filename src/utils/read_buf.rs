@@ -152,12 +152,10 @@ impl ChainSet {
 }
 
 fn parse_salt(input: &str) -> Result<B256, CliError> {
-    // Try hex first (with or without 0x prefix)
     if let Ok(val) = input.parse::<B256>() {
         return Ok(val);
     }
 
-    // Try decimal uint256 → B256
     let num: U256 = U256::from_str_radix(input, 10)
         .map_err(|e| CliError::InvalidSalt(format!("not valid hex or uint256: {e}")))?;
     Ok(B256::from(num.to_be_bytes::<32>()))
@@ -172,9 +170,6 @@ pub struct CliArgs {
     pub verify: bool,
 }
 
-/// # Errors
-///
-/// Returns `CliError` for invalid flags, missing chains, or parse failures.
 pub fn parse_args() -> Result<CliArgs, CliError> {
     use lexopt::prelude::*;
 

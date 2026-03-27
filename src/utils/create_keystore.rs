@@ -24,9 +24,6 @@ fn parse_private_key(input: &str) -> Result<[u8; 32]> {
         .map_err(|_| eyre::eyre!("Private key must be exactly 32 bytes"))
 }
 
-/// # Errors
-///
-/// Returns an error if key input, password, encryption, or file operations fail.
 pub fn create_keystore() -> Result<()> {
     let pk_input: String = prompt_hidden("Enter your private key: ")?;
     let private_key: [u8; 32] = parse_private_key(&pk_input)?;

@@ -1,12 +1,15 @@
+use alloy::primitives::Uint;
 use deterministic_deployer_evm::client::wallet_client::WalletClient;
+use deterministic_deployer_evm::data::ContractSpec;
 use deterministic_deployer_evm::helpers::balance_checker::check_balance;
 use deterministic_deployer_evm::helpers::code_checker::has_code;
 use deterministic_deployer_evm::helpers::contract_searcher::resolve_contract;
 use deterministic_deployer_evm::helpers::pre_condtions::{check_before, log_info};
 use deterministic_deployer_evm::types::constants::Constants;
-use deterministic_deployer_evm::types::errors::CliError;
+use deterministic_deployer_evm::types::errors::{BalanceCheckerError, CliError};
 use deterministic_deployer_evm::utils::read_buf::{CliArgs, parse_args};
 use log::{error, info, warn};
+use tokio::task::JoinSet;
 
 #[tokio::main]
 async fn main() {
@@ -28,8 +31,8 @@ async fn main() {
         std::process::exit(1);
     });
 
-    let contract_to_deploy = resolve_contract(&args);
-    
+    let contract_to_deploy: Option<&ContractSpec> = resolve_contract(&args);
+
     check_before(contract_to_deploy, &args);
 
     let mut deployers: Vec<WalletClient> = Vec::with_capacity(args.chains.len());
@@ -49,7 +52,8 @@ async fn main() {
     let total: usize = deployers.len();
     let mut funded: Vec<WalletClient> = Vec::with_capacity(total);
 
-    let mut join_set = tokio::task::JoinSet::new();
+    let mut join_set: JoinSet<(WalletClient, Result<Uint<256, 4>, BalanceCheckerError>)> =
+        JoinSet::new();
     for deployer in deployers {
         match has_code(&deployer, *Constants::DETERMINISTIC_DEPLOYER).await {
             Ok(true) => {

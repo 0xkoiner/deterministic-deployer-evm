@@ -6,11 +6,6 @@ use std::sync::OnceLock;
 
 static RPC_CONFIG: OnceLock<RpcConfig> = OnceLock::new();
 
-/// Returns `&'static RpcConfig`, parsing the embedded TOML exactly once.
-///
-/// # Panics
-///
-/// Panics if the embedded TOML fails to parse.
 pub fn config() -> &'static RpcConfig {
     RPC_CONFIG.get_or_init(|| load_config().expect("Failed to parse embedded RPC config"))
 }
@@ -37,22 +32,12 @@ fn validate_chain<'a>(
         .ok_or_else(|| RpcError::ChainNotFound(chain.to_string(), network.to_string()))
 }
 
-/// # Errors
-///
-/// Returns `RpcError` if the TOML fails to parse.
 pub fn load_config() -> Result<RpcConfig, RpcError> {
     let config: RpcConfig = toml::from_str(Constants::RPC_TOML)?;
     Ok(config)
 }
 
-/// # Errors
-///
-/// Returns `RpcError` if the network or chain is not found.
-pub fn get_rpc<'a>(
-    config: &'a RpcConfig,
-    network: &str,
-    chain: &str,
-) -> Result<&'a str, RpcError> {
+pub fn get_rpc<'a>(config: &'a RpcConfig, network: &str, chain: &str) -> Result<&'a str, RpcError> {
     let table = validate_network(config, network)?;
     validate_chain(table, chain, network)
 }
