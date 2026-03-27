@@ -5,6 +5,9 @@ use crate::client::public_client::PublicClient;
 use crate::client::wallet_client::WalletClient;
 use crate::types::errors::BalanceCheckerError;
 
+/// # Errors
+///
+/// Returns `BalanceCheckerError` if no provider, RPC failure, or zero balance.
 pub async fn check_balance(wallet: &WalletClient) -> Result<U256, BalanceCheckerError> {
     let address: Address = wallet.address();
 

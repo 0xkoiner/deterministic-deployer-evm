@@ -5,6 +5,9 @@ use crate::client::public_client::PublicClient;
 use crate::client::wallet_client::WalletClient;
 use crate::types::errors::CodeCheckerError;
 
+/// # Errors
+///
+/// Returns `CodeCheckerError` if no provider or RPC failure.
 pub async fn has_code(wallet: &WalletClient, address: Address) -> Result<bool, CodeCheckerError> {
     let public: &PublicClient = wallet
         .public()

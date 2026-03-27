@@ -1,5 +1,4 @@
 use deterministic_deployer_evm::client::wallet_client::WalletClient;
-use deterministic_deployer_evm::data::contracts::ContractSpec;
 use deterministic_deployer_evm::helpers::balance_checker::check_balance;
 use deterministic_deployer_evm::helpers::code_checker::has_code;
 use deterministic_deployer_evm::helpers::contract_searcher::resolve_contract;
@@ -29,9 +28,9 @@ async fn main() {
         std::process::exit(1);
     });
 
-    let contract_to_deploy: Option<&ContractSpec> = resolve_contract(&args);
+    let contract_to_deploy = resolve_contract(&args);
     
-    check_before(&contract_to_deploy, &args);
+    check_before(contract_to_deploy, &args);
 
     let mut deployers: Vec<WalletClient> = Vec::with_capacity(args.chains.len());
     for chain in &args.chains {
@@ -108,6 +107,5 @@ async fn main() {
         );
     }
 
-    let deployers: Vec<WalletClient> = funded;
-    info!("All {} deployers ready", deployers.len());
+    info!("All {} deployers ready", funded.len());
 }

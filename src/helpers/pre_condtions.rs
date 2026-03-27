@@ -22,20 +22,14 @@ pub fn log_info(args: &CliArgs) {
     }
 }
 
-pub fn check_before(contract_to_deploy: &Option<&ContractSpec>, args: &CliArgs) {
+pub fn check_before(contract_to_deploy: Option<&ContractSpec>, args: &CliArgs) {
     if let Some(spec) = contract_to_deploy {
         info!("Resolved contract: {}", spec.name);
         info!("Address contract: {:?}", spec.address);
         info!("Path contract: {:?}", spec.path);
         info!("verify_json_path contract: {:?}", spec.verify_json_path);
         info!("salt contract: {:?}", spec.salt);
-    } else if args.contract_name.is_some() || args.address.is_some() || args.contract_path.is_some()
-    {
-        error!("Contract not found in registry");
-        std::process::exit(1);
-    }
 
-    if let Some(spec) = contract_to_deploy {
         match verify_create2_address(spec) {
             Ok(addr) => {
                 info!("CREATE2 address verified: {addr}");
@@ -45,5 +39,11 @@ pub fn check_before(contract_to_deploy: &Option<&ContractSpec>, args: &CliArgs) 
                 std::process::exit(1);
             }
         }
+    } else if args.contract_name.is_some()
+        || args.address.is_some()
+        || args.contract_path.is_some()
+    {
+        error!("Contract not found in registry");
+        std::process::exit(1);
     }
 }

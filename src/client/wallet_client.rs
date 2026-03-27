@@ -5,7 +5,6 @@ use alloy::signers::local::PrivateKeySigner;
 
 use crate::client::public_client::PublicClient;
 use crate::types::constants::Constants;
-use crate::types::errors::PublicClientError;
 use crate::types::errors::WalletError;
 
 fn parse_signer(hex: &str) -> Result<PrivateKeySigner, WalletError> {
@@ -22,55 +21,70 @@ pub struct WalletClient {
 }
 
 impl WalletClient {
+    /// # Errors
+    ///
+    /// Returns `WalletError` if the env var is missing or the key is invalid.
     pub fn from_env() -> Result<Self, WalletError> {
-        let key: String = std::env::var(Constants::PRIVATE_KEY_ENV)
+        let key = std::env::var(Constants::PRIVATE_KEY_ENV)
             .map_err(|_| WalletError::EnvVarMissing(Constants::PRIVATE_KEY_ENV))?;
         Self::from_private_key(&key)
     }
 
+    /// # Errors
+    ///
+    /// Returns `WalletError` if the hex key is invalid.
     pub fn from_private_key(hex: &str) -> Result<Self, WalletError> {
-        let signer: PrivateKeySigner = parse_signer(hex)?;
+        let signer = parse_signer(hex)?;
         Ok(Self {
             signer,
             public: None,
         })
     }
 
+    /// # Errors
+    ///
+    /// Returns `WalletError` if the key is invalid or RPC setup fails.
     pub fn new(
         network: &'static str,
         chain: &'static str,
         private_key: &str,
     ) -> Result<Self, WalletError> {
-        let signer: PrivateKeySigner = parse_signer(private_key)?;
-        let public: PublicClient = PublicClient::new_public_provider(network, chain)
-            .map_err(|e: PublicClientError| WalletError::SignerError(e.to_string()))?;
+        let signer = parse_signer(private_key)?;
+        let public = PublicClient::new_public_provider(network, chain)
+            .map_err(|e| WalletError::SignerError(e.to_string()))?;
         Ok(Self {
             signer,
             public: Some(public),
         })
     }
 
+    /// # Errors
+    ///
+    /// Returns `WalletError` if the env var is missing, key is invalid, or RPC setup fails.
     pub fn from_env_with_provider(
         network: &'static str,
         chain: &'static str,
     ) -> Result<Self, WalletError> {
-        let key: String = var(Constants::PRIVATE_KEY_ENV)
+        let key = var(Constants::PRIVATE_KEY_ENV)
             .map_err(|_| WalletError::EnvVarMissing(Constants::PRIVATE_KEY_ENV))?;
         Self::new(network, chain, &key)
     }
 
     #[inline]
-    pub fn address(&self) -> Address {
+    #[must_use]
+    pub const fn address(&self) -> Address {
         self.signer.address()
     }
 
     #[inline]
-    pub fn signer(&self) -> &PrivateKeySigner {
+    #[must_use]
+    pub const fn signer(&self) -> &PrivateKeySigner {
         &self.signer
     }
 
     #[inline]
-    pub fn public(&self) -> Option<&PublicClient> {
+    #[must_use]
+    pub const fn public(&self) -> Option<&PublicClient> {
         self.public.as_ref()
     }
 }

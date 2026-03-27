@@ -13,6 +13,13 @@ fn map_provider_err(e: impl std::fmt::Display) -> PublicClientError {
     PublicClientError::ProviderError(e.to_string())
 }
 
+fn build_provider(url: &str) -> Result<DynProvider, PublicClientError> {
+    let parsed = url
+        .parse()
+        .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?;
+    Ok(ProviderBuilder::new().connect_http(parsed).erased())
+}
+
 #[derive(Debug)]
 pub struct PublicClient {
     provider: DynProvider,
@@ -22,6 +29,9 @@ pub struct PublicClient {
 }
 
 impl PublicClient {
+    /// # Errors
+    ///
+    /// Returns `PublicClientError` if the RPC config or URL is invalid.
     pub fn new_public_provider(
         network: &'static str,
         chain: &'static str,
@@ -29,21 +39,17 @@ impl PublicClient {
         Self::new_with_config(config(), network, chain)
     }
 
+    /// # Errors
+    ///
+    /// Returns `PublicClientError` if the RPC config or URL is invalid.
     pub fn new_with_config(
         config: &'static RpcConfig,
         network: &'static str,
         chain: &'static str,
     ) -> Result<Self, PublicClientError> {
-        let rpc_url: &str =
+        let rpc_url =
             get_rpc(config, network, chain).map_err(PublicClientError::RpcConfig)?;
-
-        let provider: DynProvider = ProviderBuilder::new()
-            .connect_http(
-                rpc_url
-                    .parse()
-                    .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?,
-            )
-            .erased();
+        let provider = build_provider(rpc_url)?;
 
         Ok(Self {
             provider,
@@ -53,14 +59,11 @@ impl PublicClient {
         })
     }
 
+    /// # Errors
+    ///
+    /// Returns `PublicClientError` if the URL is invalid.
     pub fn new_public_provider_from_url(rpc_url: &str) -> Result<Self, PublicClientError> {
-        let provider: DynProvider = ProviderBuilder::new()
-            .connect_http(
-                rpc_url
-                    .parse()
-                    .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?,
-            )
-            .erased();
+        let provider = build_provider(rpc_url)?;
 
         Ok(Self {
             provider,
@@ -70,10 +73,14 @@ impl PublicClient {
         })
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn get_chain_id(&self) -> Result<u64, PublicClientError> {
         self.provider.get_chain_id().await.map_err(map_provider_err)
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn get_block_number(&self) -> Result<u64, PublicClientError> {
         self.provider
             .get_block_number()
@@ -81,6 +88,8 @@ impl PublicClient {
             .map_err(map_provider_err)
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn get_gas_price(&self) -> Result<u128, PublicClientError> {
         self.provider
             .get_gas_price()
@@ -88,6 +97,8 @@ impl PublicClient {
             .map_err(map_provider_err)
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn get_balance(&self, address: Address) -> Result<U256, PublicClientError> {
         self.provider
             .get_balance(address)
@@ -95,6 +106,8 @@ impl PublicClient {
             .map_err(map_provider_err)
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn get_transaction_count(&self, address: Address) -> Result<u64, PublicClientError> {
         self.provider
             .get_transaction_count(address)
@@ -102,6 +115,8 @@ impl PublicClient {
             .map_err(map_provider_err)
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn get_code(&self, address: Address) -> Result<Bytes, PublicClientError> {
         self.provider
             .get_code_at(address)
@@ -109,6 +124,8 @@ impl PublicClient {
             .map_err(map_provider_err)
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn get_block_by_number(
         &self,
         number: BlockNumberOrTag,
@@ -119,6 +136,8 @@ impl PublicClient {
             .map_err(map_provider_err)
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn get_transaction_receipt(
         &self,
         hash: B256,
@@ -129,10 +148,14 @@ impl PublicClient {
             .map_err(map_provider_err)
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn call(&self, tx: TransactionRequest) -> Result<Bytes, PublicClientError> {
         self.provider.call(tx).await.map_err(map_provider_err)
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn estimate_gas(&self, tx: TransactionRequest) -> Result<u64, PublicClientError> {
         self.provider
             .estimate_gas(tx)
@@ -140,6 +163,8 @@ impl PublicClient {
             .map_err(map_provider_err)
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn get_logs(&self, filter: &Filter) -> Result<Vec<Log>, PublicClientError> {
         self.provider
             .get_logs(filter)
@@ -147,6 +172,8 @@ impl PublicClient {
             .map_err(map_provider_err)
     }
 
+    /// # Errors
+    /// Returns `PublicClientError` on RPC failure.
     pub async fn get_storage_at(
         &self,
         address: Address,
@@ -159,22 +186,26 @@ impl PublicClient {
     }
 
     #[inline]
-    pub fn chain(&self) -> &str {
+    #[must_use]
+    pub const fn chain(&self) -> &str {
         self.chain
     }
 
     #[inline]
-    pub fn network(&self) -> &str {
+    #[must_use]
+    pub const fn network(&self) -> &str {
         self.network
     }
 
     #[inline]
+    #[must_use]
     pub fn rpc_url(&self) -> &str {
         &self.rpc_url
     }
 
     #[inline]
-    pub fn provider(&self) -> &DynProvider {
+    #[must_use]
+    pub const fn provider(&self) -> &DynProvider {
         &self.provider
     }
 }

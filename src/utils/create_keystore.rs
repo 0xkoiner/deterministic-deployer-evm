@@ -10,13 +10,13 @@ use eyre::{Result, ensure};
 use rand::thread_rng;
 use rpassword::read_password;
 
-fn _prompt_hidden(msg: &str) -> Result<String> {
+fn prompt_hidden(msg: &str) -> Result<String> {
     print!("{msg}");
     io::stdout().flush()?;
     Ok(read_password()?)
 }
 
-fn _parse_private_key(input: &str) -> Result<[u8; 32]> {
+fn parse_private_key(input: &str) -> Result<[u8; 32]> {
     let trimmed: &str = input.trim();
     let pk_hex: &str = trimmed.strip_prefix("0x").unwrap_or(trimmed);
     hex::decode(pk_hex)?
@@ -24,12 +24,15 @@ fn _parse_private_key(input: &str) -> Result<[u8; 32]> {
         .map_err(|_| eyre::eyre!("Private key must be exactly 32 bytes"))
 }
 
+/// # Errors
+///
+/// Returns an error if key input, password, encryption, or file operations fail.
 pub fn create_keystore() -> Result<()> {
-    let pk_input: String = _prompt_hidden("Enter your private key: ")?;
-    let private_key: [u8; 32] = _parse_private_key(&pk_input)?;
+    let pk_input: String = prompt_hidden("Enter your private key: ")?;
+    let private_key: [u8; 32] = parse_private_key(&pk_input)?;
 
-    let password: String = _prompt_hidden("Enter password for keystore: ")?;
-    let password_confirm: String = _prompt_hidden("Confirm password: ")?;
+    let password: String = prompt_hidden("Enter password for keystore: ")?;
+    let password_confirm: String = prompt_hidden("Confirm password: ")?;
 
     ensure!(password == password_confirm, "Passwords do not match");
 
