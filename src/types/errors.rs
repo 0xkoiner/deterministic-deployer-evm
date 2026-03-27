@@ -1,6 +1,22 @@
 use alloy::primitives::Address;
 
 #[derive(Debug, thiserror::Error)]
+pub enum Create2Error {
+    #[error("Missing salt for contract '{0}'")]
+    MissingSalt(&'static str),
+    #[error("Missing init code for contract '{0}'")]
+    MissingInitCode(&'static str),
+    #[error("Missing expected address for contract '{0}'")]
+    MissingAddress(&'static str),
+    #[error("Address mismatch for '{contract}': expected {expected}, computed {computed}")]
+    AddressMismatch {
+        contract: &'static str,
+        expected: Address,
+        computed: Address,
+    },
+}
+
+#[derive(Debug, thiserror::Error)]
 pub enum RpcError {
     #[error("Failed to read config: {0}")]
     IoError(#[from] std::io::Error),
@@ -60,4 +76,12 @@ pub enum BalanceCheckerError {
     NoProvider(Address),
     #[error("Can't check balance for {1}: {0}")]
     CantGetBalance(String, Address),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CodeCheckerError {
+    #[error("No provider attached for {0}")]
+    NoProvider(Address),
+    #[error("Can't fetch code for {1}: {0}")]
+    ProviderError(String, Address),
 }

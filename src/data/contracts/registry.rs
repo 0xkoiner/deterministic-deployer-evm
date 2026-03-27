@@ -34,22 +34,21 @@ pub const CONTRACTS: &[ContractSpec] = &[
 ];
 
 #[inline]
+#[must_use]
 pub fn find_by_name(name: &str) -> Option<&'static ContractSpec> {
-    CONTRACTS.iter().find(|c: &&ContractSpec| c.name == name)
+    CONTRACTS.iter().find(|c| c.name == name)
 }
 
 #[inline]
+#[must_use]
 pub fn find_by_address(addr: &Address) -> Option<&'static ContractSpec> {
-    CONTRACTS
-        .iter()
-        .find(|c: &&ContractSpec| c.address.as_ref() == Some(addr))
+    CONTRACTS.iter().find(|c| c.address.as_ref() == Some(addr))
 }
 
 #[inline]
+#[must_use]
 pub fn find_by_path(path: &str) -> Option<&'static ContractSpec> {
-    CONTRACTS
-        .iter()
-        .find(|c: &&ContractSpec| c.path == Some(path))
+    CONTRACTS.iter().find(|c| c.path == Some(path))
 }
 
 pub struct DeploymentTracker {
@@ -57,6 +56,7 @@ pub struct DeploymentTracker {
 }
 
 impl DeploymentTracker {
+    #[must_use]
     pub fn new() -> Self {
         let mut deployed: HashMap<&str, bool> = HashMap::with_capacity(CONTRACTS.len());
         for spec in CONTRACTS {
@@ -71,6 +71,7 @@ impl DeploymentTracker {
         }
     }
 
+    #[must_use]
     pub fn is_deployed(&self, name: &str) -> bool {
         self.deployed.get(name).copied().unwrap_or(false)
     }

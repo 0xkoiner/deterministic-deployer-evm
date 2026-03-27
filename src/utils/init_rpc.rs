@@ -1,7 +1,3 @@
-// 1. Read a TOML file from disk
-// 2. Parse it into a Rust data structure
-// 3. Look up the value by network (mainnet/testnet) → then by chain name
-// 4. Return the RPC URL string
 use crate::types::config::RpcConfig;
 use crate::types::constants::Constants;
 use crate::types::errors::RpcError;
@@ -10,12 +6,11 @@ use std::sync::OnceLock;
 
 static RPC_CONFIG: OnceLock<RpcConfig> = OnceLock::new();
 
-/// Returns `&'static RpcConfig`, parsing the embedded TOML exactly once.
 pub fn config() -> &'static RpcConfig {
     RPC_CONFIG.get_or_init(|| load_config().expect("Failed to parse embedded RPC config"))
 }
 
-fn _validate_network<'a>(
+fn validate_network<'a>(
     config: &'a RpcConfig,
     network: &str,
 ) -> Result<&'a HashMap<String, String>, RpcError> {
@@ -26,14 +21,14 @@ fn _validate_network<'a>(
     }
 }
 
-fn _validate_chain<'a>(
+fn validate_chain<'a>(
     table: &'a HashMap<String, String>,
     chain: &str,
     network: &str,
 ) -> Result<&'a str, RpcError> {
     table
         .get(chain)
-        .map(|s| s.as_str())
+        .map(String::as_str)
         .ok_or_else(|| RpcError::ChainNotFound(chain.to_string(), network.to_string()))
 }
 
@@ -43,6 +38,6 @@ pub fn load_config() -> Result<RpcConfig, RpcError> {
 }
 
 pub fn get_rpc<'a>(config: &'a RpcConfig, network: &str, chain: &str) -> Result<&'a str, RpcError> {
-    let table = _validate_network(config, network)?;
-    _validate_chain(table, chain, network)
+    let table = validate_network(config, network)?;
+    validate_chain(table, chain, network)
 }

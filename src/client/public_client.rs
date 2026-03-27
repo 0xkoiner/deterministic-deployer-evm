@@ -13,6 +13,13 @@ fn map_provider_err(e: impl std::fmt::Display) -> PublicClientError {
     PublicClientError::ProviderError(e.to_string())
 }
 
+fn build_provider(url: &str) -> Result<DynProvider, PublicClientError> {
+    let parsed = url
+        .parse()
+        .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?;
+    Ok(ProviderBuilder::new().connect_http(parsed).erased())
+}
+
 #[derive(Debug)]
 pub struct PublicClient {
     provider: DynProvider,
@@ -34,16 +41,8 @@ impl PublicClient {
         network: &'static str,
         chain: &'static str,
     ) -> Result<Self, PublicClientError> {
-        let rpc_url: &str =
-            get_rpc(config, network, chain).map_err(PublicClientError::RpcConfig)?;
-
-        let provider: DynProvider = ProviderBuilder::new()
-            .connect_http(
-                rpc_url
-                    .parse()
-                    .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?,
-            )
-            .erased();
+        let rpc_url = get_rpc(config, network, chain).map_err(PublicClientError::RpcConfig)?;
+        let provider = build_provider(rpc_url)?;
 
         Ok(Self {
             provider,
@@ -54,13 +53,7 @@ impl PublicClient {
     }
 
     pub fn new_public_provider_from_url(rpc_url: &str) -> Result<Self, PublicClientError> {
-        let provider: DynProvider = ProviderBuilder::new()
-            .connect_http(
-                rpc_url
-                    .parse()
-                    .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?,
-            )
-            .erased();
+        let provider = build_provider(rpc_url)?;
 
         Ok(Self {
             provider,
@@ -159,22 +152,26 @@ impl PublicClient {
     }
 
     #[inline]
-    pub fn chain(&self) -> &str {
+    #[must_use]
+    pub const fn chain(&self) -> &str {
         self.chain
     }
 
     #[inline]
-    pub fn network(&self) -> &str {
+    #[must_use]
+    pub const fn network(&self) -> &str {
         self.network
     }
 
     #[inline]
+    #[must_use]
     pub fn rpc_url(&self) -> &str {
         &self.rpc_url
     }
 
     #[inline]
-    pub fn provider(&self) -> &DynProvider {
+    #[must_use]
+    pub const fn provider(&self) -> &DynProvider {
         &self.provider
     }
 }

@@ -32,99 +32,98 @@ pub enum Chain {
 impl Chain {
     pub const COUNT: usize = 18;
 
-    pub const ALL: [Chain; Self::COUNT] = [
-        Chain::Ethereum,
-        Chain::Base,
-        Chain::Arbitrum,
-        Chain::Bnb,
-        Chain::Avalanche,
-        Chain::Polygon,
-        Chain::Sonic,
-        Chain::Optimism,
-        Chain::Zora,
-        Chain::ArbitrumNova,
-        Chain::PolygonZkevm,
-        Chain::Gnosis,
-        Chain::Scroll,
-        Chain::Linea,
-        Chain::Sepolia,
-        Chain::BaseSepolia,
-        Chain::ArbitrumSepolia,
-        Chain::OptimismSepolia,
+    pub const ALL: [Self; Self::COUNT] = [
+        Self::Ethereum,
+        Self::Base,
+        Self::Arbitrum,
+        Self::Bnb,
+        Self::Avalanche,
+        Self::Polygon,
+        Self::Sonic,
+        Self::Optimism,
+        Self::Zora,
+        Self::ArbitrumNova,
+        Self::PolygonZkevm,
+        Self::Gnosis,
+        Self::Scroll,
+        Self::Linea,
+        Self::Sepolia,
+        Self::BaseSepolia,
+        Self::ArbitrumSepolia,
+        Self::OptimismSepolia,
     ];
 
     #[must_use]
     #[inline]
     pub fn from_flag(flag: &str) -> Option<Self> {
         match flag {
-            "ethereum" => Some(Chain::Ethereum),
-            "base" => Some(Chain::Base),
-            "arbitrum" => Some(Chain::Arbitrum),
-            "bnb" => Some(Chain::Bnb),
-            "avalanche" => Some(Chain::Avalanche),
-            "polygon" => Some(Chain::Polygon),
-            "sonic" => Some(Chain::Sonic),
-            "optimism" => Some(Chain::Optimism),
-            "zora" => Some(Chain::Zora),
-            "arbitrum-nova" | "arbitrum_nova" => Some(Chain::ArbitrumNova),
-            "polygon-zkevm" | "polygon_zkevm" => Some(Chain::PolygonZkevm),
-            "gnosis" => Some(Chain::Gnosis),
-            "scroll" => Some(Chain::Scroll),
-            "linea" => Some(Chain::Linea),
-            "sepolia" => Some(Chain::Sepolia),
-            "base-sepolia" | "base_sepolia" => Some(Chain::BaseSepolia),
-            "arbitrum-sepolia" | "arbitrum_sepolia" => Some(Chain::ArbitrumSepolia),
-            "optimism-sepolia" | "optimism_sepolia" => Some(Chain::OptimismSepolia),
+            "ethereum" => Some(Self::Ethereum),
+            "base" => Some(Self::Base),
+            "arbitrum" => Some(Self::Arbitrum),
+            "bnb" => Some(Self::Bnb),
+            "avalanche" => Some(Self::Avalanche),
+            "polygon" => Some(Self::Polygon),
+            "sonic" => Some(Self::Sonic),
+            "optimism" => Some(Self::Optimism),
+            "zora" => Some(Self::Zora),
+            "arbitrum-nova" | "arbitrum_nova" => Some(Self::ArbitrumNova),
+            "polygon-zkevm" | "polygon_zkevm" => Some(Self::PolygonZkevm),
+            "gnosis" => Some(Self::Gnosis),
+            "scroll" => Some(Self::Scroll),
+            "linea" => Some(Self::Linea),
+            "sepolia" => Some(Self::Sepolia),
+            "base-sepolia" | "base_sepolia" => Some(Self::BaseSepolia),
+            "arbitrum-sepolia" | "arbitrum_sepolia" => Some(Self::ArbitrumSepolia),
+            "optimism-sepolia" | "optimism_sepolia" => Some(Self::OptimismSepolia),
             _ => None,
         }
     }
 
     #[must_use]
     #[inline]
-    pub fn as_rpc_key(&self) -> &'static str {
+    pub const fn as_rpc_key(&self) -> &'static str {
         match self {
-            Chain::Ethereum => "ethereum",
-            Chain::Base => "base",
-            Chain::Arbitrum => "arbitrum",
-            Chain::Bnb => "bnb",
-            Chain::Avalanche => "avalanche",
-            Chain::Polygon => "polygon",
-            Chain::Sonic => "sonic",
-            Chain::Optimism => "optimism",
-            Chain::Zora => "zora",
-            Chain::ArbitrumNova => "arbitrum_nova",
-            Chain::PolygonZkevm => "polygon_zkevm",
-            Chain::Gnosis => "gnosis",
-            Chain::Scroll => "scroll",
-            Chain::Linea => "linea",
-            Chain::Sepolia => "sepolia",
-            Chain::BaseSepolia => "base_sepolia",
-            Chain::ArbitrumSepolia => "arbitrum_sepolia",
-            Chain::OptimismSepolia => "optimism_sepolia",
+            Self::Ethereum => "ethereum",
+            Self::Base => "base",
+            Self::Arbitrum => "arbitrum",
+            Self::Bnb => "bnb",
+            Self::Avalanche => "avalanche",
+            Self::Polygon => "polygon",
+            Self::Sonic => "sonic",
+            Self::Optimism => "optimism",
+            Self::Zora => "zora",
+            Self::ArbitrumNova => "arbitrum_nova",
+            Self::PolygonZkevm => "polygon_zkevm",
+            Self::Gnosis => "gnosis",
+            Self::Scroll => "scroll",
+            Self::Linea => "linea",
+            Self::Sepolia => "sepolia",
+            Self::BaseSepolia => "base_sepolia",
+            Self::ArbitrumSepolia => "arbitrum_sepolia",
+            Self::OptimismSepolia => "optimism_sepolia",
         }
     }
 
     #[must_use]
     #[inline]
-    pub fn network(&self) -> &'static str {
+    pub const fn network(&self) -> &'static str {
         match self {
-            Chain::Sepolia
-            | Chain::BaseSepolia
-            | Chain::ArbitrumSepolia
-            | Chain::OptimismSepolia => "testnet",
+            Self::Sepolia | Self::BaseSepolia | Self::ArbitrumSepolia | Self::OptimismSepolia => {
+                "testnet"
+            }
             _ => "mainnet",
         }
     }
 
     #[must_use]
     #[inline]
-    pub fn flag(&self) -> &'static str {
+    pub const fn flag(&self) -> &'static str {
         match self {
-            Chain::ArbitrumNova => "arbitrum-nova",
-            Chain::PolygonZkevm => "polygon-zkevm",
-            Chain::BaseSepolia => "base-sepolia",
-            Chain::ArbitrumSepolia => "arbitrum-sepolia",
-            Chain::OptimismSepolia => "optimism-sepolia",
+            Self::ArbitrumNova => "arbitrum-nova",
+            Self::PolygonZkevm => "polygon-zkevm",
+            Self::BaseSepolia => "base-sepolia",
+            Self::ArbitrumSepolia => "arbitrum-sepolia",
+            Self::OptimismSepolia => "optimism-sepolia",
             other => other.as_rpc_key(),
         }
     }
@@ -144,21 +143,19 @@ impl ChainSet {
     }
 
     #[inline]
-    fn insert(&mut self, chain: Chain) -> bool {
-        let bit: u32 = 1u32 << (chain as u8);
-        let is_new: bool = self.0 & bit == 0;
+    const fn insert(&mut self, chain: Chain) -> bool {
+        let bit = 1u32 << (chain as u8);
+        let is_new = self.0 & bit == 0;
         self.0 |= bit;
         is_new
     }
 }
 
 fn parse_salt(input: &str) -> Result<B256, CliError> {
-    // Try hex first (with or without 0x prefix)
     if let Ok(val) = input.parse::<B256>() {
         return Ok(val);
     }
 
-    // Try decimal uint256 → B256
     let num: U256 = U256::from_str_radix(input, 10)
         .map_err(|e| CliError::InvalidSalt(format!("not valid hex or uint256: {e}")))?;
     Ok(B256::from(num.to_be_bytes::<32>()))

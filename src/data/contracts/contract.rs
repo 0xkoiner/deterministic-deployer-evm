@@ -34,9 +34,9 @@ impl ContractSpec {
         if let Some(creation) = self.creation_bytecode {
             return Some(Bytes::copy_from_slice(creation));
         }
-        let deployed = self.deployed_bytecode?;
-        let args_len = self.constructor_args.map_or(0, <[u8]>::len);
-        let mut code = Vec::with_capacity(deployed.len() + args_len);
+        let deployed: &[u8] = self.deployed_bytecode?;
+        let args_len: usize = self.constructor_args.map_or(0, <[u8]>::len);
+        let mut code: Vec<u8> = Vec::with_capacity(deployed.len() + args_len);
         code.extend_from_slice(deployed);
         if let Some(args) = self.constructor_args {
             code.extend_from_slice(args);

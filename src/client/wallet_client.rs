@@ -23,13 +23,13 @@ pub struct WalletClient {
 
 impl WalletClient {
     pub fn from_env() -> Result<Self, WalletError> {
-        let key: String = std::env::var(Constants::PRIVATE_KEY_ENV)
+        let key: String = var(Constants::PRIVATE_KEY_ENV)
             .map_err(|_| WalletError::EnvVarMissing(Constants::PRIVATE_KEY_ENV))?;
         Self::from_private_key(&key)
     }
 
     pub fn from_private_key(hex: &str) -> Result<Self, WalletError> {
-        let signer: PrivateKeySigner = parse_signer(hex)?;
+        let signer = parse_signer(hex)?;
         Ok(Self {
             signer,
             public: None,
@@ -41,7 +41,7 @@ impl WalletClient {
         chain: &'static str,
         private_key: &str,
     ) -> Result<Self, WalletError> {
-        let signer: PrivateKeySigner = parse_signer(private_key)?;
+        let signer = parse_signer(private_key)?;
         let public: PublicClient = PublicClient::new_public_provider(network, chain)
             .map_err(|e: PublicClientError| WalletError::SignerError(e.to_string()))?;
         Ok(Self {
@@ -60,17 +60,20 @@ impl WalletClient {
     }
 
     #[inline]
-    pub fn address(&self) -> Address {
+    #[must_use]
+    pub const fn address(&self) -> Address {
         self.signer.address()
     }
 
     #[inline]
-    pub fn signer(&self) -> &PrivateKeySigner {
+    #[must_use]
+    pub const fn signer(&self) -> &PrivateKeySigner {
         &self.signer
     }
 
     #[inline]
-    pub fn public(&self) -> Option<&PublicClient> {
+    #[must_use]
+    pub const fn public(&self) -> Option<&PublicClient> {
         self.public.as_ref()
     }
 }
