@@ -1,4 +1,4 @@
-use alloy::primitives::Address;
+use alloy::primitives::{Address, B256};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Create2Error {
@@ -84,4 +84,22 @@ pub enum CodeCheckerError {
     NoProvider(Address),
     #[error("Can't fetch code for {1}: {0}")]
     ProviderError(String, Address),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum DeployError {
+    #[error("No provider attached for {0}")]
+    NoProvider(Address),
+    #[error("Missing salt for contract '{0}'")]
+    MissingSalt(&'static str),
+    #[error("Missing init code for contract '{0}'")]
+    MissingInitCode(&'static str),
+    #[error("Simulation reverted for '{0}': {1}")]
+    SimulationFailed(&'static str, String),
+    #[error("Failed to send transaction for '{0}': {1}")]
+    SendFailed(&'static str, String),
+    #[error("Failed to get receipt for '{0}': {1}")]
+    ReceiptFailed(&'static str, String),
+    #[error("Transaction reverted for '{0}' (tx: {1})")]
+    TxReverted(&'static str, B256),
 }
