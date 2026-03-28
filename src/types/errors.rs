@@ -52,8 +52,6 @@ pub enum PublicClientError {
 
 #[derive(Debug, thiserror::Error)]
 pub enum CliError {
-    #[error("Missing contract path")]
-    MissingContractPath,
     #[error("No chains selected")]
     NoChainsSelected,
     #[error("Unknown flag: --{0}")]

@@ -1,13 +1,13 @@
-use alloy::primitives::{Address, B256, Uint};
+use alloy::primitives::{Address, B256};
 use deterministic_deployer_evm::client::wallet_client::WalletClient;
 use deterministic_deployer_evm::data::ContractSpec;
 use deterministic_deployer_evm::data::contracts::build_contract_spec_from_args;
 use deterministic_deployer_evm::helpers::balance_checker::check_balance;
 use deterministic_deployer_evm::helpers::code_checker::has_code;
 use deterministic_deployer_evm::helpers::contract_searcher::resolve_contract;
-use deterministic_deployer_evm::helpers::pre_condtions::{check_before, log_info};
+use deterministic_deployer_evm::helpers::pre_conditions::{check_before, log_info};
 use deterministic_deployer_evm::types::constants::Constants;
-use deterministic_deployer_evm::types::errors::{BalanceCheckerError, CliError, DeployError};
+use deterministic_deployer_evm::types::errors::{CliError, DeployError};
 use deterministic_deployer_evm::utils::artifact::read_creation_bytecode;
 use deterministic_deployer_evm::utils::deploy::deploy_contract;
 use deterministic_deployer_evm::utils::read_buf::{CliArgs, parse_args};
@@ -149,80 +149,58 @@ async fn main() {
         needs_deploy.push(deployer);
     }
 
-    // ── Phase 2: Deploy (parallel) ──
+    // ── Phase 2: Balance + Deploy (parallel, no sync point between them) ──
     if !needs_deploy.is_empty() {
-        let mut join_set: JoinSet<(WalletClient, Result<Uint<256, 4>, BalanceCheckerError>)> =
+        info!("Deploying on {} chain(s)", needs_deploy.len());
+
+        let expected_address: Option<Address> = spec.address;
+        let mut deploy_set: JoinSet<Result<(String, B256, WalletClient), DeployError>> =
             JoinSet::new();
+
         for deployer in needs_deploy {
-            join_set.spawn(async move {
-                let result: Result<Uint<256, 4>, BalanceCheckerError> =
-                    check_balance(&deployer).await;
-                (deployer, result)
+            let chain = deployer
+                .public()
+                .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
+            deploy_set.spawn(async move {
+                match check_balance(&deployer).await {
+                    Ok(balance) => info!("Balance on {chain}: {balance}"),
+                    Err(e) => {
+                        warn!("Skipping {chain} — {e}");
+                        return Err(DeployError::NoProvider(deployer.address()));
+                    }
+                }
+
+                let tx_hash = deploy_contract(&deployer, &spec).await?;
+
+                if let Some(addr) = expected_address {
+                    match has_code(&deployer, addr).await {
+                        Ok(true) => {
+                            info!("Contract code confirmed at {addr} on {chain}");
+                        }
+                        Ok(false) => {
+                            error!("No code at {addr} on {chain} after deploy (tx: {tx_hash})");
+                        }
+                        Err(e) => {
+                            warn!("Could not verify code at {addr} on {chain}: {e}");
+                        }
+                    }
+                }
+
+                Ok((chain, tx_hash, deployer))
             });
         }
 
-        let mut funded: Vec<WalletClient> = Vec::new();
-        while let Some(res) = join_set.join_next().await {
+        while let Some(res) = deploy_set.join_next().await {
             match res {
-                Ok((deployer, Ok(balance))) => {
-                    info!("Balance for {}: {balance}", deployer.address());
-                    funded.push(deployer);
+                Ok(Ok((chain, tx_hash, deployer))) => {
+                    info!("Deployed '{}' on {chain} — tx: {tx_hash}", spec.name);
+                    ready_for_verify.push(deployer);
                 }
-                Ok((_deployer, Err(e))) => {
-                    warn!("Skipping deployer — {e}");
+                Ok(Err(e)) => {
+                    error!("Deploy failed: {e}");
                 }
                 Err(e) => {
-                    warn!("Task panicked: {e}");
-                }
-            }
-        }
-
-        if funded.is_empty() {
-            warn!("No deployers with sufficient balance for deployment");
-        } else {
-            info!("Deploying on {} chain(s)", funded.len());
-
-            let expected_address: Option<Address> = spec.address;
-            let mut deploy_set: JoinSet<Result<(String, B256, WalletClient), DeployError>> =
-                JoinSet::new();
-
-            for deployer in funded {
-                let chain = deployer
-                    .public()
-                    .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
-                deploy_set.spawn(async move {
-                    let tx_hash = deploy_contract(&deployer, &spec).await?;
-
-                    if let Some(addr) = expected_address {
-                        match has_code(&deployer, addr).await {
-                            Ok(true) => {
-                                info!("Contract code confirmed at {addr} on {chain}");
-                            }
-                            Ok(false) => {
-                                error!("No code at {addr} on {chain} after deploy (tx: {tx_hash})");
-                            }
-                            Err(e) => {
-                                warn!("Could not verify code at {addr} on {chain}: {e}");
-                            }
-                        }
-                    }
-
-                    Ok((chain, tx_hash, deployer))
-                });
-            }
-
-            while let Some(res) = deploy_set.join_next().await {
-                match res {
-                    Ok(Ok((chain, tx_hash, deployer))) => {
-                        info!("Deployed '{}' on {chain} — tx: {tx_hash}", spec.name);
-                        ready_for_verify.push(deployer);
-                    }
-                    Ok(Err(e)) => {
-                        error!("Deploy failed: {e}");
-                    }
-                    Err(e) => {
-                        error!("Deploy task panicked: {e}");
-                    }
+                    error!("Deploy task panicked: {e}");
                 }
             }
         }
