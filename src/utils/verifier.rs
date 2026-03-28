@@ -23,7 +23,7 @@ struct EtherscanResponse {
 }
 
 fn url_encode(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
+    let mut out = String::with_capacity(s.len() * 3);
     for b in s.bytes() {
         match b {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
@@ -74,9 +74,9 @@ fn etherscan_chain_id(chain: &str, network: &str) -> Option<u64> {
 fn verify_via_forge_sync(
     spec_name: &'static str,
     address: Address,
-    contract_id: String,
+    contract_id: &str,
     chain_id: u64,
-    api_key: String,
+    api_key: &str,
     constructor_args: Option<&[u8]>,
 ) -> Result<String, VerifierError> {
     let addr_str = format!("{address}");
@@ -86,11 +86,11 @@ fn verify_via_forge_sync(
     cmd.args([
         "verify-contract",
         &addr_str,
-        &contract_id,
+        contract_id,
         "--chain-id",
         &chain_str,
         "--etherscan-api-key",
-        &api_key,
+        api_key,
         "--watch",
     ]);
 
@@ -161,7 +161,7 @@ pub async fn verify_contract(
         let cargs = spec.constructor_args;
 
         tokio::task::spawn_blocking(move || {
-            verify_via_forge_sync(name, address, contract_id, chain_id, api_key, cargs)
+            verify_via_forge_sync(name, address, &contract_id, chain_id, &api_key, cargs)
         })
         .await
         .map_err(|e| VerifierError::VerificationFailed(spec.name, e.to_string()))?

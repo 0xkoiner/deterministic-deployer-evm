@@ -3,16 +3,16 @@
 pragma solidity ^0.8.29;
 
 import { Script, console2 as console } from "lib/forge-std/src/Script.sol";
-import { ERC20GetterHelper } from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20GetterHelper.sol";
+import { ERC20ExcessDecimalsMock } from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20ExcessDecimalsMock.sol";
 
-contract DeployMockERC20GetterHelper is Script {
-    bytes32 constant salt = 0x0000000000000000000000000000000000000000000000000000000028bb1979;
+contract DeployMockERC20ExcessDecimalsMock is Script {
+    bytes32 constant salt = 0x00000000000000000000000000000000000000000000000000000001c134292c;
     address private CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
     function run() public {
         vm.startBroadcast();
 
-        bytes memory creationCode = abi.encodePacked(type(ERC20GetterHelper).creationCode);
+        bytes memory creationCode = abi.encodePacked(type(ERC20ExcessDecimalsMock).creationCode);
         console.logBytes(creationCode);
 
         address expectedAddress = vm.computeCreate2Address(salt, keccak256(creationCode), CREATE2_DEPLOYER);

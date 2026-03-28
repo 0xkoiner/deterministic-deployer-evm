@@ -1,5 +1,4 @@
 use alloy::primitives::{Address, address, b256, hex};
-use std::collections::HashMap;
 
 use super::contract::ContractSpec;
 
@@ -48,6 +47,20 @@ pub const CONTRACTS: &[ContractSpec] = &[
         )),
         verify_json_path: None,
     },
+    ContractSpec {
+        name: "ERC20ExcessDecimalsMock",
+        address: Some(address!("0x0000DeaD891ee6543928054E07e829cff185D95E")),
+        salt: Some(b256!(
+            "0x00000000000000000000000000000000000000000000000000000001c134292c"
+        )),
+        path: Some("lib/openzeppelin-contracts/contracts/mocks/token/ERC20ExcessDecimalsMock.sol"),
+        deployer_tx: None,
+        constructor_args: None,
+        creation_bytecode: Some(&hex!(
+            "6080604052348015600e575f5ffd5b50609880601a5f395ff3fe6080604052348015600e575f5ffd5b50600436106026575f3560e01c8063313ce56714602a575b5f5ffd5b60306044565b604051603b91906081565b60405180910390f35b5f7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff905090565b5f819050919050565b607b81606b565b82525050565b5f60208201905060925f8301846074565b9291505056"
+        )),
+        verify_json_path: None,
+    },
     // Add more contracts here:
     // ContractSpec {
     //     name: "MyNewContract",
@@ -79,34 +92,3 @@ pub fn find_by_path(path: &str) -> Option<&'static ContractSpec> {
     CONTRACTS.iter().find(|c| c.path == Some(path))
 }
 
-pub struct DeploymentTracker {
-    deployed: HashMap<&'static str, bool>,
-}
-
-impl DeploymentTracker {
-    #[must_use]
-    pub fn new() -> Self {
-        let mut deployed: HashMap<&str, bool> = HashMap::with_capacity(CONTRACTS.len());
-        for spec in CONTRACTS {
-            deployed.insert(spec.name, false);
-        }
-        Self { deployed }
-    }
-
-    pub fn mark_deployed(&mut self, name: &str) {
-        if let Some(v) = self.deployed.get_mut(name) {
-            *v = true;
-        }
-    }
-
-    #[must_use]
-    pub fn is_deployed(&self, name: &str) -> bool {
-        self.deployed.get(name).copied().unwrap_or(false)
-    }
-}
-
-impl Default for DeploymentTracker {
-    fn default() -> Self {
-        Self::new()
-    }
-}
