@@ -147,7 +147,7 @@ async fn main() {
     let expected_address: Option<Address> = spec.address;
     let should_verify: bool = args.verify;
 
-    let mut deploy_set: JoinSet<Result<(String, B256), DeployError>> = JoinSet::new();
+    let mut deploy_set: JoinSet<Result<(String, B256, WalletClient), DeployError>> = JoinSet::new();
     for deployer in deployers {
         let chain = deployer
             .public()
@@ -155,23 +155,12 @@ async fn main() {
         deploy_set.spawn(async move {
             // let tx_hash = deploy_contract(&deployer, &spec).await?;
 
-            let tx_hash: B256 = b256!("cc73b63935b1e31a186cd339728d66edf914af3658e84e94b073d68963e52078"); 
+            let tx_hash: B256 = b256!("cc73b63935b1e31a186cd339728d66edf914af3658e84e94b073d68963e52078");
 
             if let Some(addr) = expected_address {
                 match has_code(&deployer, addr).await {
                     Ok(true) => {
                         info!("Contract code confirmed at {addr} on {chain}");
-
-                        if should_verify {
-                            match verify_contract(&deployer, &spec).await {
-                                Ok(status) => {
-                                    info!("Verified '{}' on {chain}: {status}", spec.name);
-                                }
-                                Err(e) => {
-                                    warn!("Etherscan verification failed on {chain}: {e}");
-                                }
-                            }
-                        }
                     }
                     Ok(false) => {
                         error!("No code at {addr} on {chain} after deploy (tx: {tx_hash})");
@@ -182,20 +171,38 @@ async fn main() {
                 }
             }
 
-            Ok((chain, tx_hash))
+            Ok((chain, tx_hash, deployer))
         });
     }
 
+    let mut deployed: Vec<(String, B256, WalletClient)> = Vec::new();
     while let Some(res) = deploy_set.join_next().await {
         match res {
-            Ok(Ok((chain, tx_hash))) => {
+            Ok(Ok((chain, tx_hash, deployer))) => {
                 info!("Deployed '{}' on {chain} — tx: {tx_hash}", spec.name);
+                deployed.push((chain, tx_hash, deployer));
             }
             Ok(Err(e)) => {
                 error!("Deploy failed: {e}");
             }
             Err(e) => {
                 error!("Deploy task panicked: {e}");
+            }
+        }
+    }
+
+    if should_verify {
+        for (i, (chain, _tx_hash, deployer)) in deployed.iter().enumerate() {
+            if i > 0 {
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+            match verify_contract(deployer, &spec).await {
+                Ok(status) => {
+                    info!("Verified '{}' on {chain}: {status}", spec.name);
+                }
+                Err(e) => {
+                    warn!("Etherscan verification failed on {chain}: {e}");
+                }
             }
         }
     }

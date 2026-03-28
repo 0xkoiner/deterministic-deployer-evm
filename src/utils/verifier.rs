@@ -91,6 +91,7 @@ fn verify_via_forge_sync(
         &chain_str,
         "--etherscan-api-key",
         &api_key,
+        "--watch",
     ]);
 
     if let Some(cargs) = constructor_args {
@@ -105,13 +106,22 @@ fn verify_via_forge_sync(
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 
+    let filtered: String = stdout
+        .lines()
+        .chain(stderr.lines())
+        .filter(|line| {
+            !line.contains("DEBUG")
+                && !line.contains("solar_")
+                && !line.contains("Compiler::drop")
+                && !line.trim().is_empty()
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
     if output.status.success() {
-        Ok(stdout.trim().to_string())
+        Ok(filtered)
     } else {
-        Err(VerifierError::VerificationFailed(
-            spec_name,
-            format!("{stdout}{stderr}").trim().to_string(),
-        ))
+        Err(VerifierError::VerificationFailed(spec_name, filtered))
     }
 }
 
