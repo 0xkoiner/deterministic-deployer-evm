@@ -17,5 +17,5 @@ linea = "https://linea-rpc.publicnode.com"
 [testnet]
 sepolia = "https://ethereum-sepolia-rpc.publicnode.com"
 base_sepolia = "https://base-sepolia-rpc.publicnode.com"
-arbitrum_sepolia = "https://arbitrum-sepolia.gateway.tenderly.co"
+arbitrum_sepolia = "https://arbitrum-sepolia-rpc.publicnode.com"
 optimism_sepolia = "https://optimism-sepolia-public.nodies.app"

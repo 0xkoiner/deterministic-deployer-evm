@@ -1,4 +1,4 @@
-use alloy::primitives::Address;
+use alloy::primitives::{Address, B256};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Create2Error {
@@ -84,4 +84,50 @@ pub enum CodeCheckerError {
     NoProvider(Address),
     #[error("Can't fetch code for {1}: {0}")]
     ProviderError(String, Address),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum DeployError {
+    #[error("No provider attached for {0}")]
+    NoProvider(Address),
+    #[error("Missing salt for contract '{0}'")]
+    MissingSalt(&'static str),
+    #[error("Missing init code for contract '{0}'")]
+    MissingInitCode(&'static str),
+    #[error("Simulation reverted for '{0}': {1}")]
+    SimulationFailed(&'static str, String),
+    #[error("Failed to send transaction for '{0}': {1}")]
+    SendFailed(&'static str, String),
+    #[error("Failed to get receipt for '{0}': {1}")]
+    ReceiptFailed(&'static str, String),
+    #[error("Transaction reverted for '{0}' (tx: {1})")]
+    TxReverted(&'static str, B256),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum VerifierError {
+    #[error("No provider attached for {0}")]
+    NoProvider(Address),
+    #[error("Missing verify JSON path for contract '{0}'")]
+    MissingVerifyPath(&'static str),
+    #[error("Missing contract address for '{0}'")]
+    MissingAddress(&'static str),
+    #[error("Missing contract source path for '{0}'")]
+    MissingContractPath(&'static str),
+    #[error("Failed to read verify JSON for '{0}': {1}")]
+    ReadFailed(&'static str, String),
+    #[error("Missing env var: {0}")]
+    MissingEnvVar(&'static str),
+    #[error("Unsupported chain for verification: {0}")]
+    UnsupportedChain(String),
+    #[error("Verification submission failed for '{0}': {1}")]
+    SubmissionFailed(&'static str, String),
+    #[error("Verification failed for '{0}': {1}")]
+    VerificationFailed(&'static str, String),
+    #[error("Verification timed out for '{0}' (guid: {1})")]
+    Timeout(&'static str, String),
+    #[error("HTTP error for '{0}': {1}")]
+    HttpError(&'static str, String),
+    #[error("forge not found — install Foundry: {0}")]
+    ForgeNotFound(String),
 }

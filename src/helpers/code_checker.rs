@@ -1,7 +1,6 @@
 use alloy::primitives::{Address, Bytes};
 
 use crate::client::public_client::PublicClient;
-
 use crate::client::wallet_client::WalletClient;
 use crate::types::errors::CodeCheckerError;
 

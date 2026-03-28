@@ -1,4 +1,4 @@
-use alloy::primitives::Uint;
+use alloy::primitives::{Address, B256, Uint};
 use deterministic_deployer_evm::client::wallet_client::WalletClient;
 use deterministic_deployer_evm::data::ContractSpec;
 use deterministic_deployer_evm::helpers::balance_checker::check_balance;
@@ -6,9 +6,12 @@ use deterministic_deployer_evm::helpers::code_checker::has_code;
 use deterministic_deployer_evm::helpers::contract_searcher::resolve_contract;
 use deterministic_deployer_evm::helpers::pre_condtions::{check_before, log_info};
 use deterministic_deployer_evm::types::constants::Constants;
-use deterministic_deployer_evm::types::errors::{BalanceCheckerError, CliError};
+use deterministic_deployer_evm::types::errors::{BalanceCheckerError, CliError, DeployError};
+use deterministic_deployer_evm::utils::deploy::deploy_contract;
 use deterministic_deployer_evm::utils::read_buf::{CliArgs, parse_args};
+use deterministic_deployer_evm::utils::verifier::verify_contract;
 use log::{error, info, warn};
+use std::process::exit;
 use tokio::task::JoinSet;
 
 #[tokio::main]
@@ -18,7 +21,7 @@ async fn main() {
 
     let args: CliArgs = parse_args().unwrap_or_else(|e: CliError| {
         eprintln!("Error: {e}");
-        std::process::exit(1);
+        exit(1);
     });
 
     log_info(&args);
@@ -28,7 +31,7 @@ async fn main() {
             "Error: {} environment variable not set",
             Constants::PRIVATE_KEY_ENV
         );
-        std::process::exit(1);
+        exit(1);
     });
 
     let contract_to_deploy: Option<&ContractSpec> = resolve_contract(&args);
@@ -44,16 +47,23 @@ async fn main() {
             }
             Err(e) => {
                 error!("Failed to create deployer for {chain}: {e}");
-                std::process::exit(1);
+                exit(1);
             }
         }
     }
 
-    let total: usize = deployers.len();
-    let mut funded: Vec<WalletClient> = Vec::with_capacity(total);
+    let spec: ContractSpec = match contract_to_deploy {
+        Some(s) => *s,
+        None => {
+            warn!("No contract specified — nothing to deploy");
+            return;
+        }
+    };
 
-    let mut join_set: JoinSet<(WalletClient, Result<Uint<256, 4>, BalanceCheckerError>)> =
-        JoinSet::new();
+    // ── Phase 1: Pre-checks (serial per chain) ──
+    let mut needs_deploy: Vec<WalletClient> = Vec::new();
+    let mut ready_for_verify: Vec<WalletClient> = Vec::new();
+
     for deployer in deployers {
         match has_code(&deployer, *Constants::DETERMINISTIC_DEPLOYER).await {
             Ok(true) => {
@@ -78,38 +88,131 @@ async fn main() {
             }
         }
 
-        join_set.spawn(async move {
-            let result = check_balance(&deployer).await;
-            (deployer, result)
-        });
+        if let Some(addr) = spec.address {
+            match has_code(&deployer, addr).await {
+                Ok(true) => {
+                    let chain = deployer.public().map_or("unknown", |p| p.chain());
+                    info!(
+                        "Contract '{}' already deployed at {addr} on {chain}",
+                        spec.name
+                    );
+                    ready_for_verify.push(deployer);
+                    continue;
+                }
+                Ok(false) => {}
+                Err(e) => {
+                    warn!("Could not check contract code at {addr}: {e}");
+                }
+            }
+        }
+
+        needs_deploy.push(deployer);
     }
 
-    while let Some(res) = join_set.join_next().await {
-        match res {
-            Ok((deployer, Ok(balance))) => {
-                info!("Balance for {}: {balance}", deployer.address());
-                funded.push(deployer);
+    // ── Phase 2: Deploy (parallel) ──
+    if !needs_deploy.is_empty() {
+        let mut join_set: JoinSet<(WalletClient, Result<Uint<256, 4>, BalanceCheckerError>)> =
+            JoinSet::new();
+        for deployer in needs_deploy {
+            join_set.spawn(async move {
+                let result: Result<Uint<256, 4>, BalanceCheckerError> =
+                    check_balance(&deployer).await;
+                (deployer, result)
+            });
+        }
+
+        let mut funded: Vec<WalletClient> = Vec::new();
+        while let Some(res) = join_set.join_next().await {
+            match res {
+                Ok((deployer, Ok(balance))) => {
+                    info!("Balance for {}: {balance}", deployer.address());
+                    funded.push(deployer);
+                }
+                Ok((_deployer, Err(e))) => {
+                    warn!("Skipping deployer — {e}");
+                }
+                Err(e) => {
+                    warn!("Task panicked: {e}");
+                }
             }
-            Ok((_deployer, Err(e))) => {
-                warn!("Skipping deployer — {e}");
+        }
+
+        if funded.is_empty() {
+            warn!("No deployers with sufficient balance for deployment");
+        } else {
+            info!("Deploying on {} chain(s)", funded.len());
+
+            let expected_address: Option<Address> = spec.address;
+            let mut deploy_set: JoinSet<Result<(String, B256, WalletClient), DeployError>> =
+                JoinSet::new();
+
+            for deployer in funded {
+                let chain = deployer
+                    .public()
+                    .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
+                deploy_set.spawn(async move {
+                    let tx_hash = deploy_contract(&deployer, &spec).await?;
+
+                    if let Some(addr) = expected_address {
+                        match has_code(&deployer, addr).await {
+                            Ok(true) => {
+                                info!("Contract code confirmed at {addr} on {chain}");
+                            }
+                            Ok(false) => {
+                                error!(
+                                    "No code at {addr} on {chain} after deploy (tx: {tx_hash})"
+                                );
+                            }
+                            Err(e) => {
+                                warn!("Could not verify code at {addr} on {chain}: {e}");
+                            }
+                        }
+                    }
+
+                    Ok((chain, tx_hash, deployer))
+                });
             }
-            Err(e) => {
-                warn!("Task panicked: {e}");
+
+            while let Some(res) = deploy_set.join_next().await {
+                match res {
+                    Ok(Ok((chain, tx_hash, deployer))) => {
+                        info!("Deployed '{}' on {chain} — tx: {tx_hash}", spec.name);
+                        ready_for_verify.push(deployer);
+                    }
+                    Ok(Err(e)) => {
+                        error!("Deploy failed: {e}");
+                    }
+                    Err(e) => {
+                        error!("Deploy task panicked: {e}");
+                    }
+                }
             }
         }
     }
 
-    if funded.is_empty() {
-        error!("No deployers with sufficient balance — aborting");
-        std::process::exit(1);
-    }
-
-    if funded.len() < total {
-        warn!(
-            "{} of {total} deployers skipped (zero balance)",
-            total - funded.len()
+    // ── Phase 3: Verify (sequential with stagger) ──
+    if args.verify && !ready_for_verify.is_empty() {
+        info!(
+            "Verifying '{}' on {} chain(s)",
+            spec.name,
+            ready_for_verify.len()
         );
-    }
 
-    info!("All {} deployers ready", funded.len());
+        for (i, deployer) in ready_for_verify.iter().enumerate() {
+            if i > 0 {
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+            let chain = deployer
+                .public()
+                .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
+            match verify_contract(deployer, &spec).await {
+                Ok(status) => {
+                    info!("Verified '{}' on {chain}: {status}", spec.name);
+                }
+                Err(e) => {
+                    warn!("Etherscan verification failed on {chain}: {e}");
+                }
+            }
+        }
+    }
 }

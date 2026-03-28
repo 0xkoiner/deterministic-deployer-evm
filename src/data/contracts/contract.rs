@@ -7,7 +7,7 @@ pub struct ContractSpec {
     pub address: Option<Address>,
     pub salt: Option<B256>,
     pub path: Option<&'static str>,
-    pub deployed_bytecode: Option<&'static [u8]>,
+    pub deployer_tx: Option<&'static [u8]>,
     pub constructor_args: Option<&'static [u8]>,
     pub creation_bytecode: Option<&'static [u8]>,
     pub verify_json_path: Option<&'static str>,
@@ -23,7 +23,7 @@ impl ContractSpec {
     }
 
     pub fn deployed_bytes(&self) -> Option<Bytes> {
-        self.deployed_bytecode.map(Bytes::copy_from_slice)
+        self.deployer_tx.map(Bytes::copy_from_slice)
     }
 
     pub fn constructor_args_bytes(&self) -> Option<Bytes> {
@@ -31,13 +31,10 @@ impl ContractSpec {
     }
 
     pub fn full_init_code(&self) -> Option<Bytes> {
-        if let Some(creation) = self.creation_bytecode {
-            return Some(Bytes::copy_from_slice(creation));
-        }
-        let deployed: &[u8] = self.deployed_bytecode?;
+        let creation: &[u8] = self.creation_bytecode?;
         let args_len: usize = self.constructor_args.map_or(0, <[u8]>::len);
-        let mut code: Vec<u8> = Vec::with_capacity(deployed.len() + args_len);
-        code.extend_from_slice(deployed);
+        let mut code: Vec<u8> = Vec::with_capacity(creation.len() + args_len);
+        code.extend_from_slice(creation);
         if let Some(args) = self.constructor_args {
             code.extend_from_slice(args);
         }
