@@ -1,5 +1,4 @@
-use alloy::hex;
-use alloy::primitives::{Address, B256, Uint, b256};
+use alloy::primitives::{Address, B256, Uint};
 use deterministic_deployer_evm::client::wallet_client::WalletClient;
 use deterministic_deployer_evm::data::ContractSpec;
 use deterministic_deployer_evm::helpers::balance_checker::check_balance;
@@ -53,89 +52,6 @@ async fn main() {
         }
     }
 
-    let total: usize = deployers.len();
-    let mut funded: Vec<WalletClient> = Vec::with_capacity(total);
-
-    let mut join_set: JoinSet<(WalletClient, Result<Uint<256, 4>, BalanceCheckerError>)> =
-        JoinSet::new();
-    // for deployer in deployers {
-    //     match has_code(&deployer, *Constants::DETERMINISTIC_DEPLOYER).await {
-    //         Ok(true) => {
-    //             info!(
-    //                 "Deterministic deployer contract found for {}",
-    //                 Constants::DETERMINISTIC_DEPLOYER
-    //             );
-    //         }
-    //         Ok(false) => {
-    //             warn!(
-    //                 "Deterministic deployer contract NOT found for {} — skipping",
-    //                 Constants::DETERMINISTIC_DEPLOYER
-    //             );
-    //             continue;
-    //         }
-    //         Err(e) => {
-    //             error!(
-    //                 "Failed to check deployer contract code for {}: {e}",
-    //                 Constants::DETERMINISTIC_DEPLOYER
-    //             );
-    //             continue;
-    //         }
-    //     }
-
-    //     if let Some(spec) = contract_to_deploy {
-    //         if let Some(addr) = spec.address {
-    //             match has_code(&deployer, addr).await {
-    //                 Ok(true) => {
-    //                     let chain = deployer.public().map_or("unknown", |p| p.chain());
-    //                     warn!(
-    //                         "Contract '{}' already deployed at {addr} on {chain} — skipping",
-    //                         spec.name
-    //                     );
-    //                     continue;
-    //                 }
-    //                 Ok(false) => {}
-    //                 Err(e) => {
-    //                     warn!("Could not check contract code at {addr}: {e}");
-    //                 }
-    //             }
-    //         }
-    //     }
-
-    //     join_set.spawn(async move {
-    //         let result: Result<Uint<256, 4>, BalanceCheckerError> = check_balance(&deployer).await;
-    //         (deployer, result)
-    //     });
-    // }
-
-    // while let Some(res) = join_set.join_next().await {
-    //     match res {
-    //         Ok((deployer, Ok(balance))) => {
-    //             info!("Balance for {}: {balance}", deployer.address());
-    //             funded.push(deployer);
-    //         }
-    //         Ok((_deployer, Err(e))) => {
-    //             warn!("Skipping deployer — {e}");
-    //         }
-    //         Err(e) => {
-    //             warn!("Task panicked: {e}");
-    //         }
-    //     }
-    // }
-
-    // if funded.is_empty() {
-    //     error!("No deployers with sufficient balance — aborting");
-    //     exit(1);
-    // }
-
-    // if funded.len() < total {
-    //     warn!(
-    //         "{} of {total} deployers skipped (zero balance)",
-    //         total - funded.len()
-    //     );
-    // }
-
-    // info!("All {} deployers ready", funded.len());
-
     let spec: ContractSpec = match contract_to_deploy {
         Some(s) => *s,
         None => {
@@ -144,58 +60,151 @@ async fn main() {
         }
     };
 
-    let expected_address: Option<Address> = spec.address;
-    let should_verify: bool = args.verify;
+    // ── Phase 1: Pre-checks (serial per chain) ──
+    let mut needs_deploy: Vec<WalletClient> = Vec::new();
+    let mut ready_for_verify: Vec<WalletClient> = Vec::new();
 
-    let mut deploy_set: JoinSet<Result<(String, B256, WalletClient), DeployError>> = JoinSet::new();
     for deployer in deployers {
-        let chain = deployer
-            .public()
-            .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
-        deploy_set.spawn(async move {
-            // let tx_hash = deploy_contract(&deployer, &spec).await?;
-
-            let tx_hash: B256 = b256!("cc73b63935b1e31a186cd339728d66edf914af3658e84e94b073d68963e52078");
-
-            if let Some(addr) = expected_address {
-                match has_code(&deployer, addr).await {
-                    Ok(true) => {
-                        info!("Contract code confirmed at {addr} on {chain}");
-                    }
-                    Ok(false) => {
-                        error!("No code at {addr} on {chain} after deploy (tx: {tx_hash})");
-                    }
-                    Err(e) => {
-                        warn!("Could not verify code at {addr} on {chain}: {e}");
-                    }
-                }
+        match has_code(&deployer, *Constants::DETERMINISTIC_DEPLOYER).await {
+            Ok(true) => {
+                info!(
+                    "Deterministic deployer contract found for {}",
+                    Constants::DETERMINISTIC_DEPLOYER
+                );
             }
-
-            Ok((chain, tx_hash, deployer))
-        });
-    }
-
-    let mut deployed: Vec<(String, B256, WalletClient)> = Vec::new();
-    while let Some(res) = deploy_set.join_next().await {
-        match res {
-            Ok(Ok((chain, tx_hash, deployer))) => {
-                info!("Deployed '{}' on {chain} — tx: {tx_hash}", spec.name);
-                deployed.push((chain, tx_hash, deployer));
-            }
-            Ok(Err(e)) => {
-                error!("Deploy failed: {e}");
+            Ok(false) => {
+                warn!(
+                    "Deterministic deployer contract NOT found for {} — skipping",
+                    Constants::DETERMINISTIC_DEPLOYER
+                );
+                continue;
             }
             Err(e) => {
-                error!("Deploy task panicked: {e}");
+                error!(
+                    "Failed to check deployer contract code for {}: {e}",
+                    Constants::DETERMINISTIC_DEPLOYER
+                );
+                continue;
+            }
+        }
+
+        if let Some(addr) = spec.address {
+            match has_code(&deployer, addr).await {
+                Ok(true) => {
+                    let chain = deployer.public().map_or("unknown", |p| p.chain());
+                    info!(
+                        "Contract '{}' already deployed at {addr} on {chain}",
+                        spec.name
+                    );
+                    ready_for_verify.push(deployer);
+                    continue;
+                }
+                Ok(false) => {}
+                Err(e) => {
+                    warn!("Could not check contract code at {addr}: {e}");
+                }
+            }
+        }
+
+        needs_deploy.push(deployer);
+    }
+
+    // ── Phase 2: Deploy (parallel) ──
+    if !needs_deploy.is_empty() {
+        let mut join_set: JoinSet<(WalletClient, Result<Uint<256, 4>, BalanceCheckerError>)> =
+            JoinSet::new();
+        for deployer in needs_deploy {
+            join_set.spawn(async move {
+                let result: Result<Uint<256, 4>, BalanceCheckerError> =
+                    check_balance(&deployer).await;
+                (deployer, result)
+            });
+        }
+
+        let mut funded: Vec<WalletClient> = Vec::new();
+        while let Some(res) = join_set.join_next().await {
+            match res {
+                Ok((deployer, Ok(balance))) => {
+                    info!("Balance for {}: {balance}", deployer.address());
+                    funded.push(deployer);
+                }
+                Ok((_deployer, Err(e))) => {
+                    warn!("Skipping deployer — {e}");
+                }
+                Err(e) => {
+                    warn!("Task panicked: {e}");
+                }
+            }
+        }
+
+        if funded.is_empty() {
+            warn!("No deployers with sufficient balance for deployment");
+        } else {
+            info!("Deploying on {} chain(s)", funded.len());
+
+            let expected_address: Option<Address> = spec.address;
+            let mut deploy_set: JoinSet<Result<(String, B256, WalletClient), DeployError>> =
+                JoinSet::new();
+
+            for deployer in funded {
+                let chain = deployer
+                    .public()
+                    .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
+                deploy_set.spawn(async move {
+                    let tx_hash = deploy_contract(&deployer, &spec).await?;
+
+                    if let Some(addr) = expected_address {
+                        match has_code(&deployer, addr).await {
+                            Ok(true) => {
+                                info!("Contract code confirmed at {addr} on {chain}");
+                            }
+                            Ok(false) => {
+                                error!(
+                                    "No code at {addr} on {chain} after deploy (tx: {tx_hash})"
+                                );
+                            }
+                            Err(e) => {
+                                warn!("Could not verify code at {addr} on {chain}: {e}");
+                            }
+                        }
+                    }
+
+                    Ok((chain, tx_hash, deployer))
+                });
+            }
+
+            while let Some(res) = deploy_set.join_next().await {
+                match res {
+                    Ok(Ok((chain, tx_hash, deployer))) => {
+                        info!("Deployed '{}' on {chain} — tx: {tx_hash}", spec.name);
+                        ready_for_verify.push(deployer);
+                    }
+                    Ok(Err(e)) => {
+                        error!("Deploy failed: {e}");
+                    }
+                    Err(e) => {
+                        error!("Deploy task panicked: {e}");
+                    }
+                }
             }
         }
     }
 
-    if should_verify {
-        for (i, (chain, _tx_hash, deployer)) in deployed.iter().enumerate() {
+    // ── Phase 3: Verify (sequential with stagger) ──
+    if args.verify && !ready_for_verify.is_empty() {
+        info!(
+            "Verifying '{}' on {} chain(s)",
+            spec.name,
+            ready_for_verify.len()
+        );
+
+        for (i, deployer) in ready_for_verify.iter().enumerate() {
             if i > 0 {
                 tokio::time::sleep(std::time::Duration::from_secs(1)).await;
             }
+            let chain = deployer
+                .public()
+                .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
             match verify_contract(deployer, &spec).await {
                 Ok(status) => {
                     info!("Verified '{}' on {chain}: {status}", spec.name);
