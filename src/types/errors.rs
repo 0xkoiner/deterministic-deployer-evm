@@ -66,6 +66,8 @@ pub enum CliError {
     InvalidContractName(String),
     #[error("Invalid address: {0}")]
     InvalidAddress(String),
+    #[error("Invalid constructor args: {0}")]
+    InvalidConstructorArgs(String),
 }
 
 #[derive(Debug, thiserror::Error)]

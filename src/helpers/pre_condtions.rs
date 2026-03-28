@@ -20,6 +20,9 @@ pub fn log_info(args: &CliArgs) {
     if args.verify {
         info!("Verify: true");
     }
+    if let Some(ref constructor_args) = args.constructor_args {
+        info!("Constructor args: {constructor_args}");
+    }
 }
 
 pub fn check_before(contract_to_deploy: Option<&ContractSpec>, args: &CliArgs) {
