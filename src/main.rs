@@ -60,12 +60,33 @@ async fn main() {
         }
     };
 
-    // ── Phase 1: Pre-checks (serial per chain) ──
+    // ── Phase 1: Pre-checks (parallel across all chains) ──
     let mut needs_deploy: Vec<WalletClient> = Vec::new();
     let mut ready_for_verify: Vec<WalletClient> = Vec::new();
 
+    let contract_addr = spec.address;
+    let mut precheck_set = JoinSet::new();
     for deployer in deployers {
-        match has_code(&deployer, *Constants::DETERMINISTIC_DEPLOYER).await {
+        precheck_set.spawn(async move {
+            let has_deployer = has_code(&deployer, *Constants::DETERMINISTIC_DEPLOYER).await;
+            let has_contract = match contract_addr {
+                Some(addr) => has_code(&deployer, addr).await.ok(),
+                None => None,
+            };
+            (deployer, has_deployer, has_contract)
+        });
+    }
+
+    while let Some(res) = precheck_set.join_next().await {
+        let (deployer, has_deployer, has_contract) = match res {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Pre-check task panicked: {e}");
+                continue;
+            }
+        };
+
+        match has_deployer {
             Ok(true) => {
                 info!(
                     "Deterministic deployer contract found for {}",
@@ -88,22 +109,14 @@ async fn main() {
             }
         }
 
-        if let Some(addr) = spec.address {
-            match has_code(&deployer, addr).await {
-                Ok(true) => {
-                    let chain = deployer.public().map_or("unknown", |p| p.chain());
-                    info!(
-                        "Contract '{}' already deployed at {addr} on {chain}",
-                        spec.name
-                    );
-                    ready_for_verify.push(deployer);
-                    continue;
-                }
-                Ok(false) => {}
-                Err(e) => {
-                    warn!("Could not check contract code at {addr}: {e}");
-                }
-            }
+        if has_contract == Some(true) {
+            let chain = deployer.public().map_or("unknown", |p| p.chain());
+            info!(
+                "Contract '{}' already deployed at {:?} on {chain}",
+                spec.name, spec.address
+            );
+            ready_for_verify.push(deployer);
+            continue;
         }
 
         needs_deploy.push(deployer);

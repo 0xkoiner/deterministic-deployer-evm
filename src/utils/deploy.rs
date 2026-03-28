@@ -37,13 +37,6 @@ pub async fn deploy_contract(
         .with_to(*Constants::DETERMINISTIC_DEPLOYER)
         .with_input(calldata);
 
-    let gas: u64 = public
-        .estimate_gas(tx.clone())
-        .await
-        .map_err(|e| DeployError::SimulationFailed(spec.name, e.to_string()))?;
-
-    let tx: TransactionRequest = tx.with_gas_limit(gas);
-
     let url: Url = public
         .rpc_url()
         .parse()
@@ -52,6 +45,13 @@ pub async fn deploy_contract(
     let provider = ProviderBuilder::new()
         .wallet(wallet.signer().clone())
         .connect_http(url);
+
+    let gas: u64 = provider
+        .estimate_gas(tx.clone())
+        .await
+        .map_err(|e| DeployError::SimulationFailed(spec.name, e.to_string()))?;
+
+    let tx: TransactionRequest = tx.with_gas_limit(gas);
 
     let pending = provider
         .send_transaction(tx)
