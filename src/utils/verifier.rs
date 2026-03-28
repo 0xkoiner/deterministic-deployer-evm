@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use alloy::primitives::{hex, Address};
+use alloy::primitives::{Address, hex};
 use alloy::transports::http::reqwest;
 use alloy::transports::http::reqwest::Client;
 use log::info;
@@ -152,7 +152,13 @@ pub async fn verify_contract(
 
     if let Some(verify_path) = spec.verify_json_path {
         verify_via_etherscan_api(
-            spec, address, contract_path, chain, chain_id, &api_key, verify_path,
+            spec,
+            address,
+            contract_path,
+            chain,
+            chain_id,
+            &api_key,
+            verify_path,
         )
         .await
     } else {

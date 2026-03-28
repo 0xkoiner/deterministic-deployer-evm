@@ -59,8 +59,7 @@ impl PublicClient {
         chain: &'static str,
         signer: PrivateKeySigner,
     ) -> Result<Self, PublicClientError> {
-        let rpc_url =
-            get_rpc(config(), network, chain).map_err(PublicClientError::RpcConfig)?;
+        let rpc_url = get_rpc(config(), network, chain).map_err(PublicClientError::RpcConfig)?;
         let parsed = rpc_url
             .parse()
             .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?;

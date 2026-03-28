@@ -172,9 +172,7 @@ async fn main() {
                                 info!("Contract code confirmed at {addr} on {chain}");
                             }
                             Ok(false) => {
-                                error!(
-                                    "No code at {addr} on {chain} after deploy (tx: {tx_hash})"
-                                );
+                                error!("No code at {addr} on {chain} after deploy (tx: {tx_hash})");
                             }
                             Err(e) => {
                                 warn!("Could not verify code at {addr} on {chain}: {e}");

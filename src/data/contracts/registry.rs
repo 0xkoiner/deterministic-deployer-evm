@@ -105,4 +105,3 @@ pub fn find_by_address(addr: &Address) -> Option<&'static ContractSpec> {
 pub fn find_by_path(path: &str) -> Option<&'static ContractSpec> {
     CONTRACTS.iter().find(|c| c.path == Some(path))
 }
-
