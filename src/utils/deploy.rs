@@ -1,15 +1,15 @@
 use alloy::network::TransactionBuilder;
 use alloy::primitives::{B256, Bytes, FixedBytes};
 use alloy::providers::{Provider, ProviderBuilder};
-use alloy::rpc::types::{TransactionRequest, TransactionReceipt};
+use alloy::rpc::types::{TransactionReceipt, TransactionRequest};
 use alloy::transports::http::reqwest::Url;
-use log::{warn};
+use log::warn;
 
+use crate::client::public_client::PublicClient;
 use crate::client::wallet_client::WalletClient;
 use crate::data::contracts::ContractSpec;
 use crate::types::constants::Constants;
 use crate::types::errors::DeployError;
-use crate::client::public_client::PublicClient;
 
 fn build_calldata(salt: &B256, init_code: &Bytes) -> Bytes {
     let mut buf: Vec<u8> = Vec::with_capacity(32 + init_code.len());
@@ -17,7 +17,6 @@ fn build_calldata(salt: &B256, init_code: &Bytes) -> Bytes {
     buf.extend_from_slice(init_code);
     buf.into()
 }
-
 
 pub async fn deploy_contract(
     wallet: &WalletClient,
