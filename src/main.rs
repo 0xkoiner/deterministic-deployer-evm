@@ -1,12 +1,14 @@
 use alloy::primitives::{Address, B256, Uint};
 use deterministic_deployer_evm::client::wallet_client::WalletClient;
 use deterministic_deployer_evm::data::ContractSpec;
+use deterministic_deployer_evm::data::contracts::build_contract_spec_from_args;
 use deterministic_deployer_evm::helpers::balance_checker::check_balance;
 use deterministic_deployer_evm::helpers::code_checker::has_code;
 use deterministic_deployer_evm::helpers::contract_searcher::resolve_contract;
 use deterministic_deployer_evm::helpers::pre_condtions::{check_before, log_info};
 use deterministic_deployer_evm::types::constants::Constants;
 use deterministic_deployer_evm::types::errors::{BalanceCheckerError, CliError, DeployError};
+use deterministic_deployer_evm::utils::artifact::read_creation_bytecode;
 use deterministic_deployer_evm::utils::deploy::deploy_contract;
 use deterministic_deployer_evm::utils::read_buf::{CliArgs, parse_args};
 use deterministic_deployer_evm::utils::verifier::verify_contract;
@@ -34,7 +36,32 @@ async fn main() {
         exit(1);
     });
 
-    let contract_to_deploy: Option<&ContractSpec> = resolve_contract(&args);
+    let registry_spec: Option<&ContractSpec> = resolve_contract(&args);
+
+    let dynamic_spec: Option<ContractSpec>;
+    let contract_to_deploy: Option<&ContractSpec> = if registry_spec.is_some() {
+        registry_spec
+    } else if let (Some(contract_path), Some(salt)) = (&args.contract_path, args.salt) {
+        let (name, creation_bytecode) =
+            read_creation_bytecode(contract_path, args.contract_name.as_deref()).unwrap_or_else(
+                |e| {
+                    error!("Failed to read artifact: {e}");
+                    exit(1);
+                },
+            );
+
+        info!("Built spec from artifact: {name}");
+        dynamic_spec = Some(build_contract_spec_from_args(
+            name,
+            contract_path.to_string_lossy().to_string(),
+            salt,
+            creation_bytecode.to_vec(),
+            args.constructor_args.clone(),
+        ));
+        dynamic_spec.as_ref()
+    } else {
+        None
+    };
 
     check_before(contract_to_deploy, &args);
 

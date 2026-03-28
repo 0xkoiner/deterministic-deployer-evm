@@ -1,3 +1,4 @@
+pub mod artifact;
 pub mod create_2;
 pub mod create_keystore;
 pub mod deploy;
