@@ -5,7 +5,6 @@ use alloy::signers::local::PrivateKeySigner;
 
 use crate::client::public_client::PublicClient;
 use crate::types::constants::Constants;
-use crate::types::errors::PublicClientError;
 use crate::types::errors::WalletError;
 
 fn parse_signer(hex: &str) -> Result<PrivateKeySigner, WalletError> {
@@ -42,8 +41,8 @@ impl WalletClient {
         private_key: &str,
     ) -> Result<Self, WalletError> {
         let signer = parse_signer(private_key)?;
-        let public: PublicClient = PublicClient::new_public_provider(network, chain)
-            .map_err(|e: PublicClientError| WalletError::SignerError(e.to_string()))?;
+        let public = PublicClient::new_with_signer(network, chain, signer.clone())
+            .map_err(|e| WalletError::SignerError(e.to_string()))?;
         Ok(Self {
             signer,
             public: Some(public),
