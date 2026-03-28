@@ -5,6 +5,8 @@ use alloy::primitives::{Address, B256, Bytes, U256};
 use alloy::providers::{DynProvider, Provider, ProviderBuilder};
 use alloy::rpc::types::{Block, Filter, Log, TransactionReceipt, TransactionRequest};
 
+use alloy::signers::local::PrivateKeySigner;
+
 use crate::types::config::RpcConfig;
 use crate::types::errors::PublicClientError;
 use crate::utils::init_rpc::{config, get_rpc};
@@ -44,6 +46,27 @@ impl PublicClient {
         let rpc_url = get_rpc(config, network, chain).map_err(PublicClientError::RpcConfig)?;
         let provider = build_provider(rpc_url)?;
 
+        Ok(Self {
+            provider,
+            chain,
+            network,
+            rpc_url: Cow::Borrowed(rpc_url),
+        })
+    }
+
+    pub fn new_with_signer(
+        network: &'static str,
+        chain: &'static str,
+        signer: PrivateKeySigner,
+    ) -> Result<Self, PublicClientError> {
+        let rpc_url = get_rpc(config(), network, chain).map_err(PublicClientError::RpcConfig)?;
+        let parsed = rpc_url
+            .parse()
+            .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?;
+        let provider = ProviderBuilder::new()
+            .wallet(signer)
+            .connect_http(parsed)
+            .erased();
         Ok(Self {
             provider,
             chain,

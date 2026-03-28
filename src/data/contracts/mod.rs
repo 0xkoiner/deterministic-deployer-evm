@@ -2,4 +2,4 @@ pub mod contract;
 pub mod registry;
 
 pub use contract::ContractSpec;
-pub use registry::{CONTRACTS, DeploymentTracker, find_by_address, find_by_name, find_by_path};
+pub use registry::{CONTRACTS, find_by_address, find_by_name, find_by_path};

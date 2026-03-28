@@ -1,11 +1,8 @@
 use alloy::network::TransactionBuilder;
 use alloy::primitives::{B256, Bytes, FixedBytes};
-use alloy::providers::{Provider, ProviderBuilder};
+use alloy::providers::Provider;
 use alloy::rpc::types::{TransactionReceipt, TransactionRequest};
-use alloy::transports::http::reqwest::Url;
-use log::warn;
 
-use crate::client::public_client::PublicClient;
 use crate::client::wallet_client::WalletClient;
 use crate::data::contracts::ContractSpec;
 use crate::types::constants::Constants;
@@ -22,7 +19,7 @@ pub async fn deploy_contract(
     wallet: &WalletClient,
     spec: &ContractSpec,
 ) -> Result<B256, DeployError> {
-    let public: &PublicClient = wallet
+    let public = wallet
         .public()
         .ok_or_else(|| DeployError::NoProvider(wallet.address()))?;
 
@@ -44,16 +41,8 @@ pub async fn deploy_contract(
 
     let tx: TransactionRequest = tx.with_gas_limit(gas);
 
-    let url: Url = public
-        .rpc_url()
-        .parse()
-        .map_err(|e| DeployError::SendFailed(spec.name, format!("invalid URL: {e}")))?;
-
-    let provider = ProviderBuilder::new()
-        .wallet(wallet.signer().clone())
-        .connect_http(url);
-
-    let pending = provider
+    let pending = public
+        .provider()
         .send_transaction(tx)
         .await
         .map_err(|e| DeployError::SendFailed(spec.name, e.to_string()))?;
@@ -68,8 +57,6 @@ pub async fn deploy_contract(
     if !receipt.status() {
         return Err(DeployError::TxReverted(spec.name, tx_hash));
     }
-
-    warn!("TX send with {tx_hash}. Status: {}", receipt.status());
 
     Ok(tx_hash)
 }
