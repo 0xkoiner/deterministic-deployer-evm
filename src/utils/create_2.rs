@@ -8,7 +8,7 @@ use crate::types::errors::Create2Error;
 pub fn compute_create2_address(deployer: &Address, salt: &B256, init_code: &[u8]) -> Address {
     let init_code_hash: FixedBytes<32> = keccak256(init_code);
 
-    let mut buf = [0u8; 1 + 20 + 32 + 32]; // 85 bytes
+    let mut buf: [u8; 85] = [0u8; 1 + 20 + 32 + 32]; // 85 bytes
     buf[0] = 0xff;
     buf[1..21].copy_from_slice(deployer.as_slice());
     buf[21..53].copy_from_slice(salt.as_slice());

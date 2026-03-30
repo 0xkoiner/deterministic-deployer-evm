@@ -38,6 +38,6 @@ pub fn load_config() -> Result<RpcConfig, RpcError> {
 }
 
 pub fn get_rpc<'a>(config: &'a RpcConfig, network: &str, chain: &str) -> Result<&'a str, RpcError> {
-    let table = validate_network(config, network)?;
+    let table: &HashMap<String, String> = validate_network(config, network)?;
     validate_chain(table, chain, network)
 }

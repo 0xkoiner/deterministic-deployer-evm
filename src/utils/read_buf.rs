@@ -1,5 +1,7 @@
 use std::ffi::OsString;
+use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
+use std::process::exit;
 
 use crate::types::errors::CliError;
 use alloy::primitives::{Address, B256, Bytes, U256, hex};
@@ -129,8 +131,8 @@ impl Chain {
     }
 }
 
-impl std::fmt::Display for Chain {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for Chain {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.flag())
     }
 }
@@ -191,10 +193,10 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
         match arg {
             Short('h') | Long("help") => {
                 print_usage();
-                std::process::exit(0);
+                exit(0);
             }
             Long("salt") => {
-                let val: std::ffi::OsString = parser
+                let val: OsString = parser
                     .value()
                     .map_err(|e| CliError::ParseError(e.to_string()))?;
                 let val_str = val

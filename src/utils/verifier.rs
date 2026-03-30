@@ -1,9 +1,13 @@
+use std::borrow::Cow;
+use std::env::var;
+use std::fs::read_to_string;
+use std::process::Output;
 use std::time::Duration;
 
 use alloy::primitives::{Address, hex};
 use alloy::transports::http::reqwest;
 use alloy::transports::http::reqwest::Client;
-use log::info;
+use log::{info, warn};
 use serde::Deserialize;
 use tokio::time::sleep;
 
@@ -23,7 +27,7 @@ struct EtherscanResponse {
 }
 
 fn url_encode(s: &str) -> String {
-    let mut out = String::with_capacity(s.len() * 3);
+    let mut out: String = String::with_capacity(s.len() * 3);
     for b in s.bytes() {
         match b {
             b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
@@ -79,8 +83,8 @@ fn verify_via_forge_sync(
     api_key: &str,
     constructor_args: Option<&[u8]>,
 ) -> Result<String, VerifierError> {
-    let addr_str = format!("{address}");
-    let chain_str = chain_id.to_string();
+    let addr_str: String = format!("{address}");
+    let chain_str: String = chain_id.to_string();
 
     let mut cmd = std::process::Command::new("forge");
     cmd.args([
@@ -95,16 +99,16 @@ fn verify_via_forge_sync(
     ]);
 
     if let Some(cargs) = constructor_args {
-        let encoded = hex::encode(cargs);
+        let encoded: String = hex::encode(cargs);
         cmd.args(["--constructor-args", &encoded]);
     }
 
-    let output = cmd
+    let output: Output = cmd
         .output()
         .map_err(|e| VerifierError::ForgeNotFound(e.to_string()))?;
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stdout: Cow<'_, str> = String::from_utf8_lossy(&output.stdout);
+    let stderr: Cow<'_, str> = String::from_utf8_lossy(&output.stderr);
 
     let filtered: String = stdout
         .lines()
@@ -147,7 +151,7 @@ pub async fn verify_contract(
     let chain_id: u64 = etherscan_chain_id(chain, network)
         .ok_or_else(|| VerifierError::UnsupportedChain(chain.to_string()))?;
 
-    let api_key: String = std::env::var(Constants::ETHERSCAN_API_KEY_ENV)
+    let api_key: String = var(Constants::ETHERSCAN_API_KEY_ENV)
         .map_err(|_| VerifierError::MissingEnvVar(Constants::ETHERSCAN_API_KEY_ENV))?;
 
     if let Some(verify_path) = spec.verify_json_path {
@@ -162,9 +166,9 @@ pub async fn verify_contract(
         )
         .await
     } else {
-        let contract_id = format!("{contract_path}:{}", spec.name);
-        let name = spec.name;
-        let cargs = spec.constructor_args;
+        let contract_id: String = format!("{contract_path}:{}", spec.name);
+        let name: &str = spec.name;
+        let cargs: Option<&[u8]> = spec.constructor_args;
 
         tokio::task::spawn_blocking(move || {
             verify_via_forge_sync(name, address, &contract_id, chain_id, &api_key, cargs)
@@ -183,10 +187,10 @@ async fn verify_via_etherscan_api(
     api_key: &str,
     verify_path: &str,
 ) -> Result<String, VerifierError> {
-    let compiler_version: String = std::env::var(Constants::SOLC_VERSION_ENV)
+    let compiler_version: String = var(Constants::SOLC_VERSION_ENV)
         .map_err(|_| VerifierError::MissingEnvVar(Constants::SOLC_VERSION_ENV))?;
 
-    let source_code: String = std::fs::read_to_string(verify_path)
+    let source_code: String = read_to_string(verify_path)
         .map_err(|e| VerifierError::ReadFailed(spec.name, e.to_string()))?;
 
     let contract_name: String = format!("{contract_path}:{}", spec.name);
@@ -198,7 +202,7 @@ async fn verify_via_etherscan_api(
         Constants::ETHERSCAN_V2_URL
     );
 
-    let addr_str = format!("{address}");
+    let addr_str: String = format!("{address}");
     let body: String = build_form_body(&[
         ("contractaddress", &addr_str),
         ("sourceCode", &source_code),
@@ -256,4 +260,33 @@ async fn verify_via_etherscan_api(
     }
 
     Err(VerifierError::Timeout(spec.name, guid))
+}
+
+pub async fn run_verifications(ready_for_verify: &[WalletClient], spec: &ContractSpec) {
+    if ready_for_verify.is_empty() {
+        return;
+    }
+
+    info!(
+        "Verifying '{}' on {} chain(s)",
+        spec.name,
+        ready_for_verify.len()
+    );
+
+    for (i, deployer) in ready_for_verify.iter().enumerate() {
+        if i > 0 {
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        }
+        let chain: String = deployer
+            .public()
+            .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
+        match verify_contract(deployer, spec).await {
+            Ok(status) => {
+                info!("Verified '{}' on {chain}: {status}", spec.name);
+            }
+            Err(e) => {
+                warn!("Etherscan verification failed on {chain}: {e}");
+            }
+        }
+    }
 }
