@@ -12,10 +12,9 @@ contract DeployMockERC4626 is Script {
     function run() public {
         vm.startBroadcast();
 
-
         bytes memory constructorArgs = abi.encode(address(0xcafe));
         console.logBytes(constructorArgs);
-        
+
         bytes memory creationCode = abi.encodePacked(type(ERC4626Mock).creationCode, constructorArgs);
         // console.logBytes(creationCode);
 

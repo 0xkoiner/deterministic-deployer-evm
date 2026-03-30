@@ -1,5 +1,12 @@
-use alloy::primitives::{Address, B256, Bytes};
-use std::path::Path;
+use alloy::primitives::{Address, B256, Bytes, FixedBytes};
+use log::{error, info};
+use std::path::{Path, PathBuf};
+use std::process::exit;
+
+use crate::data::contracts::build_contract_spec_from_args;
+use crate::types::errors::ArtifactError;
+use crate::utils::artifact::read_creation_bytecode;
+use crate::utils::read_buf::CliArgs;
 
 #[derive(Debug, Clone, Copy)]
 pub struct ContractSpec {
@@ -40,4 +47,29 @@ impl ContractSpec {
         }
         Some(code.into())
     }
+}
+
+pub fn create_contract_spec_from_args(args: &CliArgs) -> Option<ContractSpec> {
+    let (contract_path, salt): (&PathBuf, &FixedBytes<32>) = match (&args.contract_path, &args.salt)
+    {
+        (Some(path), Some(salt)) => (path, salt),
+        _ => return None,
+    };
+
+    let (name, creation_bytecode): (String, Bytes) =
+        read_creation_bytecode(contract_path, args.contract_name.as_deref()).unwrap_or_else(
+            |e: ArtifactError| {
+                error!("Failed to read artifact: {e}");
+                exit(1);
+            },
+        );
+
+    info!("Built spec from artifact: {name}");
+    Some(build_contract_spec_from_args(
+        name,
+        contract_path.to_string_lossy().to_string(),
+        *salt,
+        creation_bytecode.to_vec(),
+        args.constructor_args.clone(),
+    ))
 }

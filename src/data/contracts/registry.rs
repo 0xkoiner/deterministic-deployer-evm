@@ -83,7 +83,7 @@ pub const CONTRACTS: &[ContractSpec] = &[
     //     address: address!("1234567890abcdef1234567890abcdef12345678"),
     //     salt: b256!("00000000000000000000000000000000000000000000000000000000deadbeef"),
     //     path: Some("src/MyContract.sol"),
-    //     deployed_bytecode: &hex!("6080604052..."),
+    //     deployer_tx: &hex!("6080604052..."),
     //     constructor_args: Some(&hex!("0000...")),
     //     creation_bytecode: None,
     //     verify_json_path: Some("contracts/verify/1234...5678.json"),
@@ -93,19 +93,23 @@ pub const CONTRACTS: &[ContractSpec] = &[
 #[inline]
 #[must_use]
 pub fn find_by_name(name: &str) -> Option<&'static ContractSpec> {
-    CONTRACTS.iter().find(|c| c.name == name)
+    CONTRACTS.iter().find(|c: &&ContractSpec| c.name == name)
 }
 
 #[inline]
 #[must_use]
 pub fn find_by_address(addr: &Address) -> Option<&'static ContractSpec> {
-    CONTRACTS.iter().find(|c| c.address.as_ref() == Some(addr))
+    CONTRACTS
+        .iter()
+        .find(|c: &&ContractSpec| c.address.as_ref() == Some(addr))
 }
 
 #[inline]
 #[must_use]
 pub fn find_by_path(path: &str) -> Option<&'static ContractSpec> {
-    CONTRACTS.iter().find(|c| c.path == Some(path))
+    CONTRACTS
+        .iter()
+        .find(|c: &&ContractSpec| c.path == Some(path))
 }
 
 pub fn build_contract_spec_from_args(
@@ -119,14 +123,15 @@ pub fn build_contract_spec_from_args(
     let path: &'static str = Box::leak(path.into_boxed_str());
     let creation_bytecode: &'static [u8] = Box::leak(creation_bytecode.into_boxed_slice());
     let constructor_args: Option<&'static [u8]> =
-        constructor_args.map(|b| &*Box::leak(b.to_vec().into_boxed_slice()));
+        constructor_args.map(|b: Bytes| &*Box::leak(b.to_vec().into_boxed_slice()));
 
-    let mut init_code = creation_bytecode.to_vec();
+    let mut init_code: Vec<u8> = creation_bytecode.to_vec();
     if let Some(args) = constructor_args {
         init_code.extend_from_slice(args);
     }
 
-    let address = compute_create2_address(Constants::DETERMINISTIC_DEPLOYER, &salt, &init_code);
+    let address: Address =
+        compute_create2_address(Constants::DETERMINISTIC_DEPLOYER, &salt, &init_code);
 
     ContractSpec {
         name,

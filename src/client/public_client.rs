@@ -1,22 +1,23 @@
 use std::borrow::Cow;
+use std::fmt::Display;
 
 use alloy::eips::BlockNumberOrTag;
 use alloy::primitives::{Address, B256, Bytes, U256};
 use alloy::providers::{DynProvider, Provider, ProviderBuilder};
 use alloy::rpc::types::{Block, Filter, Log, TransactionReceipt, TransactionRequest};
-
 use alloy::signers::local::PrivateKeySigner;
+use alloy::transports::http::reqwest::Url;
 
 use crate::types::config::RpcConfig;
 use crate::types::errors::PublicClientError;
 use crate::utils::init_rpc::{config, get_rpc};
 
-fn map_provider_err(e: impl std::fmt::Display) -> PublicClientError {
+fn map_provider_err(e: impl Display) -> PublicClientError {
     PublicClientError::ProviderError(e.to_string())
 }
 
 fn build_provider(url: &str) -> Result<DynProvider, PublicClientError> {
-    let parsed = url
+    let parsed: Url = url
         .parse()
         .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?;
     Ok(ProviderBuilder::new().connect_http(parsed).erased())
@@ -43,8 +44,9 @@ impl PublicClient {
         network: &'static str,
         chain: &'static str,
     ) -> Result<Self, PublicClientError> {
-        let rpc_url = get_rpc(config, network, chain).map_err(PublicClientError::RpcConfig)?;
-        let provider = build_provider(rpc_url)?;
+        let rpc_url: &str =
+            get_rpc(config, network, chain).map_err(PublicClientError::RpcConfig)?;
+        let provider: DynProvider = build_provider(rpc_url)?;
 
         Ok(Self {
             provider,
@@ -59,11 +61,12 @@ impl PublicClient {
         chain: &'static str,
         signer: PrivateKeySigner,
     ) -> Result<Self, PublicClientError> {
-        let rpc_url = get_rpc(config(), network, chain).map_err(PublicClientError::RpcConfig)?;
-        let parsed = rpc_url
+        let rpc_url: &str =
+            get_rpc(config(), network, chain).map_err(PublicClientError::RpcConfig)?;
+        let parsed: Url = rpc_url
             .parse()
             .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?;
-        let provider = ProviderBuilder::new()
+        let provider: DynProvider = ProviderBuilder::new()
             .wallet(signer)
             .connect_http(parsed)
             .erased();
@@ -76,7 +79,7 @@ impl PublicClient {
     }
 
     pub fn new_public_provider_from_url(rpc_url: &str) -> Result<Self, PublicClientError> {
-        let provider = build_provider(rpc_url)?;
+        let provider: DynProvider = build_provider(rpc_url)?;
 
         Ok(Self {
             provider,

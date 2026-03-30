@@ -1,17 +1,18 @@
+use log::{error, info};
 use std::env::var;
+use std::process::exit;
 
 use alloy::primitives::Address;
-use alloy::signers::local::PrivateKeySigner;
+use alloy::signers::local::{LocalSignerError, PrivateKeySigner};
 
 use crate::client::public_client::PublicClient;
 use crate::types::constants::Constants;
 use crate::types::errors::WalletError;
+use crate::utils::read_buf::{Chain, CliArgs, parse_args};
 
 fn parse_signer(hex: &str) -> Result<PrivateKeySigner, WalletError> {
     hex.parse()
-        .map_err(|e: alloy::signers::local::LocalSignerError| {
-            WalletError::InvalidPrivateKey(e.to_string())
-        })
+        .map_err(|e: LocalSignerError| WalletError::InvalidPrivateKey(e.to_string()))
 }
 
 #[derive(Debug)]
@@ -41,7 +42,7 @@ impl WalletClient {
         private_key: &str,
     ) -> Result<Self, WalletError> {
         let signer = parse_signer(private_key)?;
-        let public = PublicClient::new_with_signer(network, chain, signer.clone())
+        let public: PublicClient = PublicClient::new_with_signer(network, chain, signer.clone())
             .map_err(|e| WalletError::SignerError(e.to_string()))?;
         Ok(Self {
             signer,
@@ -66,4 +67,21 @@ impl WalletClient {
     pub const fn public(&self) -> Option<&PublicClient> {
         self.public.as_ref()
     }
+}
+
+pub fn create_deployers(chains: &[Chain], private_key: &str) -> Vec<WalletClient> {
+    let mut deployers: Vec<WalletClient> = Vec::with_capacity(chains.len());
+    for chain in chains {
+        match WalletClient::new(chain.network(), chain.as_rpc_key(), private_key) {
+            Ok(wallet) => {
+                info!("Created deployer for {} — {}", chain, wallet.address());
+                deployers.push(wallet);
+            }
+            Err(e) => {
+                error!("Failed to create deployer for {chain}: {e}");
+                exit(1);
+            }
+        }
+    }
+    deployers
 }
