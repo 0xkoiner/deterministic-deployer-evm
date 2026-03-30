@@ -176,7 +176,7 @@ async fn run_deployments(needs_deploy: Vec<WalletClient>, spec: ContractSpec) ->
                 }
             }
 
-            let tx_hash = deploy_contract(&deployer, &spec).await?;
+            let tx_hash: FixedBytes<32> = deploy_contract(&deployer, &spec).await?;
 
             if let Some(addr) = expected_address {
                 match has_code(&deployer, addr).await {
@@ -213,6 +213,35 @@ async fn run_deployments(needs_deploy: Vec<WalletClient>, spec: ContractSpec) ->
     }
 
     deployed
+}
+
+async fn run_verifications(ready_for_verify: &[WalletClient], spec: &ContractSpec) {
+    if ready_for_verify.is_empty() {
+        return;
+    }
+
+    info!(
+        "Verifying '{}' on {} chain(s)",
+        spec.name,
+        ready_for_verify.len()
+    );
+
+    for (i, deployer) in ready_for_verify.iter().enumerate() {
+        if i > 0 {
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        }
+        let chain: String = deployer
+            .public()
+            .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
+        match verify_contract(deployer, &spec).await {
+            Ok(status) => {
+                info!("Verified '{}' on {chain}: {status}", spec.name);
+            }
+            Err(e) => {
+                warn!("Etherscan verification failed on {chain}: {e}");
+            }
+        }
+    }
 }
 
 #[tokio::main]
@@ -256,32 +285,10 @@ async fn main() {
         mut ready_for_verify,
     } = run_prechecks(deployers, &spec).await;
 
-    let deployed = run_deployments(needs_deploy, spec).await;
+    let deployed: Vec<WalletClient> = run_deployments(needs_deploy, spec).await;
     ready_for_verify.extend(deployed);
 
-    // ── Phase 3: Verify (sequential with stagger) ──
-    if args.verify && !ready_for_verify.is_empty() {
-        info!(
-            "Verifying '{}' on {} chain(s)",
-            spec.name,
-            ready_for_verify.len()
-        );
-
-        for (i, deployer) in ready_for_verify.iter().enumerate() {
-            if i > 0 {
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            }
-            let chain = deployer
-                .public()
-                .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
-            match verify_contract(deployer, &spec).await {
-                Ok(status) => {
-                    info!("Verified '{}' on {chain}: {status}", spec.name);
-                }
-                Err(e) => {
-                    warn!("Etherscan verification failed on {chain}: {e}");
-                }
-            }
-        }
+    if args.verify {
+        run_verifications(&ready_for_verify, &spec).await;
     }
 }
