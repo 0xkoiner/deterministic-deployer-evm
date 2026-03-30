@@ -17,7 +17,6 @@ use deterministic_deployer_evm::utils::read_buf::{Chain, CliArgs, parse_args};
 use deterministic_deployer_evm::utils::verifier::verify_contract;
 use env_logger::{Builder, Env};
 use log::{error, info, warn};
-use std::env::VarError;
 use std::env::var;
 use std::path::PathBuf;
 use std::process::exit;
@@ -28,14 +27,14 @@ struct PrecheckResult {
     ready_for_verify: Vec<WalletClient>,
 }
 
-fn parse_pk() -> Result<String, VarError> {
-    Ok(var(Constants::PRIVATE_KEY_ENV).unwrap_or_else(|_| {
+fn parse_pk() -> String {
+    var(Constants::PRIVATE_KEY_ENV).unwrap_or_else(|_| {
         error!(
             "Error: {} environment variable not set",
             Constants::PRIVATE_KEY_ENV
         );
         exit(1);
-    }))
+    })
 }
 
 fn create_contract_spec_from_args(args: &CliArgs) -> Option<ContractSpec> {
@@ -196,12 +195,12 @@ async fn run_deployments(needs_deploy: Vec<WalletClient>, spec: ContractSpec) ->
         });
     }
 
-    let mut deployed: Vec<WalletClient> = Vec::new();
+    let mut successful_deployed: Vec<WalletClient> = Vec::new();
     while let Some(res) = deploy_set.join_next().await {
         match res {
             Ok(Ok((chain, tx_hash, deployer))) => {
                 info!("Deployed '{}' on {chain} — tx: {tx_hash}", spec.name);
-                deployed.push(deployer);
+                successful_deployed.push(deployer);
             }
             Ok(Err(e)) => {
                 error!("Deploy failed: {e}");
@@ -212,7 +211,7 @@ async fn run_deployments(needs_deploy: Vec<WalletClient>, spec: ContractSpec) ->
         }
     }
 
-    deployed
+    successful_deployed
 }
 
 async fn run_verifications(ready_for_verify: &[WalletClient], spec: &ContractSpec) {
@@ -233,7 +232,7 @@ async fn run_verifications(ready_for_verify: &[WalletClient], spec: &ContractSpe
         let chain: String = deployer
             .public()
             .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
-        match verify_contract(deployer, &spec).await {
+        match verify_contract(deployer, spec).await {
             Ok(status) => {
                 info!("Verified '{}' on {chain}: {status}", spec.name);
             }
@@ -256,7 +255,7 @@ async fn main() {
 
     log_info(&args);
 
-    let private_key: String = parse_pk().expect("Failed to parse private key");
+    let private_key: String = parse_pk();
 
     let registry_spec: Option<&ContractSpec> = resolve_contract(&args);
 
@@ -272,12 +271,9 @@ async fn main() {
 
     let deployers: Vec<WalletClient> = create_deployers(&args.chains, &private_key);
 
-    let spec: ContractSpec = match contract_to_deploy {
-        Some(s) => *s,
-        None => {
-            warn!("No contract specified — nothing to deploy");
-            return;
-        }
+    let Some(spec) = contract_to_deploy.copied() else {
+        warn!("No contract specified — nothing to deploy");
+        return;
     };
 
     let PrecheckResult {
