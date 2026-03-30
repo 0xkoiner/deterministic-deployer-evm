@@ -49,15 +49,6 @@ impl WalletClient {
         })
     }
 
-    pub fn from_env_with_provider(
-        network: &'static str,
-        chain: &'static str,
-    ) -> Result<Self, WalletError> {
-        let key: String = var(Constants::PRIVATE_KEY_ENV)
-            .map_err(|_| WalletError::EnvVarMissing(Constants::PRIVATE_KEY_ENV))?;
-        Self::new(network, chain, &key)
-    }
-
     #[inline]
     #[must_use]
     pub const fn address(&self) -> Address {

@@ -52,8 +52,6 @@ pub enum PublicClientError {
 
 #[derive(Debug, thiserror::Error)]
 pub enum CliError {
-    #[error("Missing contract path")]
-    MissingContractPath,
     #[error("No chains selected")]
     NoChainsSelected,
     #[error("Unknown flag: --{0}")]
@@ -66,6 +64,8 @@ pub enum CliError {
     InvalidContractName(String),
     #[error("Invalid address: {0}")]
     InvalidAddress(String),
+    #[error("Invalid constructor args: {0}")]
+    InvalidConstructorArgs(String),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -130,4 +130,16 @@ pub enum VerifierError {
     HttpError(&'static str, String),
     #[error("forge not found — install Foundry: {0}")]
     ForgeNotFound(String),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ArtifactError {
+    #[error("Missing contract file name in path")]
+    MissingFileName,
+    #[error("Artifact not found at {0} — run `forge build` first")]
+    NotFound(String),
+    #[error("Failed to parse artifact JSON: {0}")]
+    ParseFailed(String),
+    #[error("Empty bytecode in artifact for '{0}'")]
+    EmptyBytecode(String),
 }

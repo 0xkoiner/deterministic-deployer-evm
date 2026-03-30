@@ -1,6 +1,8 @@
-use alloy::primitives::{Address, address, b256, hex};
+use alloy::primitives::{Address, B256, Bytes, address, b256, hex};
 
 use super::contract::ContractSpec;
+use crate::types::constants::Constants;
+use crate::utils::create_2::compute_create2_address;
 
 pub const CONTRACTS: &[ContractSpec] = &[
     ContractSpec {
@@ -104,4 +106,36 @@ pub fn find_by_address(addr: &Address) -> Option<&'static ContractSpec> {
 #[must_use]
 pub fn find_by_path(path: &str) -> Option<&'static ContractSpec> {
     CONTRACTS.iter().find(|c| c.path == Some(path))
+}
+
+pub fn build_contract_spec_from_args(
+    name: String,
+    path: String,
+    salt: B256,
+    creation_bytecode: Vec<u8>,
+    constructor_args: Option<Bytes>,
+) -> ContractSpec {
+    let name: &'static str = Box::leak(name.into_boxed_str());
+    let path: &'static str = Box::leak(path.into_boxed_str());
+    let creation_bytecode: &'static [u8] = Box::leak(creation_bytecode.into_boxed_slice());
+    let constructor_args: Option<&'static [u8]> =
+        constructor_args.map(|b| &*Box::leak(b.to_vec().into_boxed_slice()));
+
+    let mut init_code = creation_bytecode.to_vec();
+    if let Some(args) = constructor_args {
+        init_code.extend_from_slice(args);
+    }
+
+    let address = compute_create2_address(Constants::DETERMINISTIC_DEPLOYER, &salt, &init_code);
+
+    ContractSpec {
+        name,
+        address: Some(address),
+        salt: Some(salt),
+        path: Some(path),
+        deployer_tx: None,
+        constructor_args,
+        creation_bytecode: Some(creation_bytecode),
+        verify_json_path: None,
+    }
 }

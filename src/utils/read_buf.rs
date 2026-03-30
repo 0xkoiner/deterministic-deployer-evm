@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::path::PathBuf;
 
 use crate::types::errors::CliError;
-use alloy::primitives::{Address, B256, U256};
+use alloy::primitives::{Address, B256, Bytes, U256, hex};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
@@ -168,6 +168,7 @@ pub struct CliArgs {
     pub contract_name: Option<String>,
     pub address: Option<Address>,
     pub verify: bool,
+    pub constructor_args: Option<Bytes>,
 }
 
 pub fn parse_args() -> Result<CliArgs, CliError> {
@@ -178,6 +179,7 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
     let mut contract_name: Option<String> = None;
     let mut address: Option<Address> = None;
     let mut verify: bool = false;
+    let mut constructor_args: Option<Bytes> = None;
     let mut chains: Vec<Chain> = Vec::with_capacity(Chain::COUNT);
     let mut seen: ChainSet = ChainSet::new();
     let mut parser: lexopt::Parser = lexopt::Parser::from_env();
@@ -211,6 +213,20 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
             }
             Long("verify") => {
                 verify = true;
+            }
+            Long("constructor-args") => {
+                let val: OsString = parser
+                    .value()
+                    .map_err(|e| CliError::ParseError(e.to_string()))?;
+                let val_str = val
+                    .to_str()
+                    .ok_or_else(|| CliError::InvalidConstructorArgs("invalid UTF-8".to_string()))?;
+                let trimmed = val_str.strip_prefix("0x").unwrap_or(val_str);
+                constructor_args = Some(
+                    hex::decode(trimmed)
+                        .map_err(|e| CliError::InvalidConstructorArgs(e.to_string()))?
+                        .into(),
+                );
             }
             Long("address") => {
                 let val: OsString = parser
@@ -257,6 +273,7 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
         contract_name,
         address,
         verify,
+        constructor_args,
     })
 }
 
@@ -268,6 +285,9 @@ fn print_usage() {
     eprintln!("  --contract-name <name>  Contract name (e.g. ERC20)");
     eprintln!("  --address <hex>         Contract address (hex, with or without 0x)");
     eprintln!("  --verify                Enable contract verification");
+    eprintln!(
+        "  --constructor-args <hex> ABI-encoded constructor arguments (hex, with or without 0x)"
+    );
     eprintln!();
     eprintln!("Mainnets:");
     for chain in &Chain::ALL {
