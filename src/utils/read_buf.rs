@@ -171,6 +171,7 @@ pub struct CliArgs {
     pub address: Option<Address>,
     pub verify: bool,
     pub constructor_args: Option<Bytes>,
+    pub keystore: bool,
 }
 
 pub fn parse_args() -> Result<CliArgs, CliError> {
@@ -182,6 +183,7 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
     let mut address: Option<Address> = None;
     let mut verify: bool = false;
     let mut constructor_args: Option<Bytes> = None;
+    let mut keystore: bool = false;
     let mut chains: Vec<Chain> = Vec::with_capacity(Chain::COUNT);
     let mut seen: ChainSet = ChainSet::new();
     let mut parser: lexopt::Parser = lexopt::Parser::from_env();
@@ -215,6 +217,9 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
             }
             Long("verify") => {
                 verify = true;
+            }
+            Long("keystore") => {
+                keystore = true;
             }
             Long("constructor-args") => {
                 let val: OsString = parser
@@ -276,6 +281,7 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
         address,
         verify,
         constructor_args,
+        keystore,
     })
 }
 
@@ -287,6 +293,7 @@ fn print_usage() {
     eprintln!("  --contract-name <name>  Contract name (e.g. ERC20)");
     eprintln!("  --address <hex>         Contract address (hex, with or without 0x)");
     eprintln!("  --verify                Enable contract verification");
+    eprintln!("  --keystore              Create and use an encrypted keystore");
     eprintln!(
         "  --constructor-args <hex> ABI-encoded constructor arguments (hex, with or without 0x)"
     );

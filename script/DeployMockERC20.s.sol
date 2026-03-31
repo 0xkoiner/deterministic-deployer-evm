@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.29;
 
-import { Script, console2 as console } from "lib/forge-std/src/Script.sol";
+import { Script, console2 as console, StdStyle } from "lib/forge-std/src/Script.sol";
 import { ERC20Mock } from "lib/openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 
 contract DeployMockERC20 is Script {
@@ -13,8 +13,8 @@ contract DeployMockERC20 is Script {
         vm.startBroadcast();
 
         bytes memory creationCode = abi.encodePacked(type(ERC20Mock).creationCode);
-        // console.logBytes(creationCode);
-
+        console.logBytes(creationCode);
+        
         address expectedAddress = vm.computeCreate2Address(salt, keccak256(creationCode), CREATE2_DEPLOYER);
 
         console.log("Expected deployment address:", expectedAddress);

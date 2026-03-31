@@ -8,7 +8,7 @@ use alloy::signers::local::{LocalSignerError, PrivateKeySigner};
 use crate::client::public_client::PublicClient;
 use crate::types::constants::Constants;
 use crate::types::errors::WalletError;
-use crate::utils::read_buf::{Chain, CliArgs, parse_args};
+use crate::utils::read_buf::Chain;
 
 fn parse_signer(hex: &str) -> Result<PrivateKeySigner, WalletError> {
     hex.parse()

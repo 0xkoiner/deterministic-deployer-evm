@@ -1,5 +1,5 @@
 use crate::types::constants::Constants;
-use std::fs::{create_dir_all, rename};
+use std::fs::{create_dir_all, rename, read_dir};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
@@ -24,7 +24,7 @@ fn parse_private_key(input: &str) -> Result<[u8; 32]> {
         .map_err(|_| eyre::eyre!("Private key must be exactly 32 bytes"))
 }
 
-pub fn create_keystore() -> Result<()> {
+pub fn create_keystore() -> Result<String> {
     let pk_input: String = prompt_hidden("Enter your private key: ")?;
     let private_key: [u8; 32] = parse_private_key(&pk_input)?;
 
@@ -64,5 +64,73 @@ pub fn create_keystore() -> Result<()> {
 
     println!("Keystore saved to {}", ks_path.display());
 
-    Ok(())
+    Ok(pk_input.trim().to_string())
+}
+
+fn prompt_visible(msg: &str) -> Result<String> {
+    print!("{msg}");
+    io::stdout().flush()?;
+    let mut input: String = String::new();
+    io::stdin().read_line(&mut input)?;
+    Ok(input.trim().to_string())
+}
+
+pub fn load_keystore() -> Result<String> {
+    let dir: &Path = Path::new(Constants::KEYSTORE_DIR);
+
+    let entries: Vec<String> = read_dir(dir)?
+        .filter_map(|e| e.ok())
+        .filter_map(|e| e.file_name().to_str().map(String::from))
+        .filter(|name| name.starts_with("ks-"))
+        .collect();
+
+    if entries.is_empty() {
+        return Err(eyre::eyre!("No keystores found"));
+    }
+
+    println!("Available keystores:");
+    for (i, name) in entries.iter().enumerate() {
+        println!(
+            "  [{}] {}",
+            i + 1,
+            name.strip_prefix("ks-").unwrap_or(name)
+        );
+    }
+
+    let selection: String = prompt_visible("Select keystore (number): ")?;
+    let idx: usize = selection
+        .parse::<usize>()
+        .map_err(|_| eyre::eyre!("Invalid number"))?
+        - 1;
+    let ks_name: &String = entries
+        .get(idx)
+        .ok_or_else(|| eyre::eyre!("Selection out of range"))?;
+
+    let password: String = prompt_hidden("Enter keystore password: ")?;
+
+    let ks_path: PathBuf = dir.join(ks_name);
+    let signer: LocalSigner<SigningKey> = LocalSigner::decrypt_keystore(&ks_path, &password)?;
+
+    println!("Loaded keystore: {}", signer.address());
+
+    let key_bytes = signer.credential().to_bytes();
+    Ok(hex::encode(key_bytes))
+}
+
+pub fn load_or_create_keystore() -> Result<String> {
+    let dir: &Path = Path::new(Constants::KEYSTORE_DIR);
+    let has_keystores: bool = dir.is_dir()
+        && read_dir(dir)?
+            .filter_map(|e| e.ok())
+            .any(|e| {
+                e.file_name()
+                    .to_str()
+                    .is_some_and(|n| n.starts_with("ks-"))
+            });
+
+    if has_keystores {
+        load_keystore()
+    } else {
+        create_keystore()
+    }
 }
