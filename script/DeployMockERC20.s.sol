@@ -14,7 +14,7 @@ contract DeployMockERC20 is Script {
 
         bytes memory creationCode = abi.encodePacked(type(ERC20Mock).creationCode);
         console.logBytes(creationCode);
-        
+
         address expectedAddress = vm.computeCreate2Address(salt, keccak256(creationCode), CREATE2_DEPLOYER);
 
         console.log("Expected deployment address:", expectedAddress);
