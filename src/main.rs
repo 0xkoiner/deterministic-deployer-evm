@@ -1,5 +1,6 @@
+use env_logger::fmt::style::Style;
 use env_logger::{Builder, Env};
-use log::{error, warn};
+use log::{Level, error, warn};
 use std::env::var;
 use std::process::exit;
 
@@ -27,9 +28,30 @@ fn parse_pk() -> String {
     })
 }
 
+fn init_logger() {
+    Builder::from_env(Env::default().default_filter_or("info"))
+        .format(|buf, record| {
+            use std::io::Write;
+            let level: log::Level = record.level();
+            let level_style: Style = buf.default_level_style(level);
+            let style: Style = match level {
+                Level::Error | Level::Warn | Level::Debug => buf.default_level_style(level),
+                _ => Style::new(),
+            };
+            writeln!(
+                buf,
+                "[{} {level_style}{level}{level_style:#} {}] {style}{}{style:#}",
+                buf.timestamp(),
+                record.module_path().unwrap_or(""),
+                record.args(),
+            )
+        })
+        .init();
+}
+
 #[tokio::main]
 async fn main() {
-    Builder::from_env(Env::default().default_filter_or("info")).init();
+    init_logger();
     dotenv::dotenv().ok();
 
     let args: CliArgs = parse_args().unwrap_or_else(|e: CliError| {

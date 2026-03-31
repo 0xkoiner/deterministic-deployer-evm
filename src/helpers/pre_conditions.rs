@@ -20,25 +20,25 @@ pub struct PrecheckResult {
 
 pub fn log_info(args: &CliArgs) {
     if let Some(ref contract_path) = args.contract_path {
-        info!("Contract path: {}", contract_path.display());
+        warn!("Contract path: {}", contract_path.display());
     }
     if let Some(salt) = args.salt {
-        info!("Salt: {salt}");
+        warn!("Salt: {salt}");
     }
     if let Some(ref contract_name) = args.contract_name {
-        info!("Contract name: {contract_name}");
+        warn!("Contract name: {contract_name}");
     }
     if let Some(address) = args.address {
-        info!("Address: {address}");
+        warn!("Address: {address}");
     }
     if args.verify {
-        info!("Verify: true");
+        warn!("Verify: true");
     }
     if let Some(ref constructor_args) = args.constructor_args {
-        info!("Constructor args: {constructor_args}");
+        warn!("Constructor args: {constructor_args}");
     }
     if args.keystore {
-        info!("Keystore: true");
+        warn!("Keystore: true");
     }
 }
 
