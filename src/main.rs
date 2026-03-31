@@ -12,6 +12,7 @@ use deterministic_deployer_evm::helpers::pre_conditions::{
 };
 use deterministic_deployer_evm::types::constants::Constants;
 use deterministic_deployer_evm::types::errors::CliError;
+use deterministic_deployer_evm::utils::create_keystore::load_or_create_keystore;
 use deterministic_deployer_evm::utils::deploy::run_deployments;
 use deterministic_deployer_evm::utils::read_buf::{CliArgs, parse_args};
 use deterministic_deployer_evm::utils::verifier::run_verifications;
@@ -38,7 +39,14 @@ async fn main() {
 
     log_info(&args);
 
-    let private_key: String = parse_pk();
+    let private_key: String = if args.keystore {
+        load_or_create_keystore().unwrap_or_else(|e| {
+            error!("Keystore error: {e}");
+            exit(1);
+        })
+    } else {
+        parse_pk()
+    };
 
     let registry_spec: Option<&ContractSpec> = resolve_contract(&args);
 
