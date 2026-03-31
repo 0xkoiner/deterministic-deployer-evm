@@ -1,5 +1,5 @@
 use crate::types::constants::Constants;
-use std::fs::{create_dir_all, rename, read_dir};
+use std::fs::{create_dir_all, read_dir, rename};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
@@ -90,20 +90,21 @@ pub fn load_keystore() -> Result<String> {
 
     println!("Available keystores:");
     for (i, name) in entries.iter().enumerate() {
-        println!(
-            "  [{}] {}",
-            i + 1,
-            name.strip_prefix("ks-").unwrap_or(name)
-        );
+        println!("  [{}] {}", i + 1, name.strip_prefix("ks-").unwrap_or(name));
     }
+    println!("  [{}] Create new keystore", entries.len() + 1);
 
-    let selection: String = prompt_visible("Select keystore (number): ")?;
+    let selection: String = prompt_visible("Select option (number): ")?;
     let idx: usize = selection
         .parse::<usize>()
-        .map_err(|_| eyre::eyre!("Invalid number"))?
-        - 1;
+        .map_err(|_| eyre::eyre!("Invalid number"))?;
+
+    if idx == entries.len() + 1 {
+        return create_keystore();
+    }
+
     let ks_name: &String = entries
-        .get(idx)
+        .get(idx - 1)
         .ok_or_else(|| eyre::eyre!("Selection out of range"))?;
 
     let password: String = prompt_hidden("Enter keystore password: ")?;
@@ -122,11 +123,7 @@ pub fn load_or_create_keystore() -> Result<String> {
     let has_keystores: bool = dir.is_dir()
         && read_dir(dir)?
             .filter_map(|e| e.ok())
-            .any(|e| {
-                e.file_name()
-                    .to_str()
-                    .is_some_and(|n| n.starts_with("ks-"))
-            });
+            .any(|e| e.file_name().to_str().is_some_and(|n| n.starts_with("ks-")));
 
     if has_keystores {
         load_keystore()
