@@ -1,11 +1,11 @@
-use std::borrow::Cow;
-use std::path::PathBuf;
 use serde::Deserialize;
+use std::borrow::Cow;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
+use alloy::primitives::{Address, B256, Bytes};
 use alloy::providers::DynProvider;
 use alloy::signers::local::PrivateKeySigner;
-use alloy::primitives::{Address, B256, Bytes};
 
 #[derive(Deserialize)]
 pub struct RpcConfig {

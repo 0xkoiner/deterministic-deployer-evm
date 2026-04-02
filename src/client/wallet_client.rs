@@ -5,7 +5,7 @@ use std::process::exit;
 use alloy::primitives::Address;
 use alloy::signers::local::{LocalSignerError, PrivateKeySigner};
 
-use crate::types::config::{ PublicClient, WalletClient, Chain };
+use crate::types::config::{Chain, PublicClient, WalletClient};
 use crate::types::constants::Constants;
 use crate::types::errors::WalletError;
 

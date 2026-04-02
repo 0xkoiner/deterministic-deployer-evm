@@ -3,8 +3,8 @@ use std::fmt::{Display, Formatter};
 use std::path::PathBuf;
 use std::process::exit;
 
-use crate::types::errors::CliError;
 use crate::types::config::{Chain, ChainSet, CliArgs};
+use crate::types::errors::CliError;
 use alloy::primitives::{Address, B256, Bytes, U256, hex};
 
 impl Chain {
@@ -133,7 +133,6 @@ impl Display for Chain {
         f.write_str(self.flag())
     }
 }
-
 
 impl ChainSet {
     const fn new() -> Self {

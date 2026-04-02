@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::process::exit;
 
 use crate::data::contracts::build_contract_spec_from_args;
-use crate::types::config::{ContractSpec, CliArgs};
+use crate::types::config::{CliArgs, ContractSpec};
 use crate::types::errors::ArtifactError;
 use crate::utils::artifact::read_creation_bytecode;
 

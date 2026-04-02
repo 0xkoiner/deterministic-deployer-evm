@@ -5,11 +5,11 @@ use tokio::task::JoinSet;
 use alloy::primitives::Address;
 
 use crate::helpers::code_checker::has_code;
+use crate::types::config::{CliArgs, ContractSpec, PrecheckResult, PublicClient, WalletClient};
 use crate::types::constants::Constants;
 use crate::types::errors::CodeCheckerError;
 use crate::utils::create_2::verify_create2_address;
 use crate::utils::init_explorers::addr_url;
-use crate::types::config::{PublicClient, WalletClient, PrecheckResult, CliArgs, ContractSpec};
 
 pub fn log_info(args: &CliArgs) {
     if let Some(ref contract_path) = args.contract_path {
@@ -111,25 +111,29 @@ pub async fn run_prechecks(deployers: Vec<WalletClient>, spec: &ContractSpec) ->
             }
         }
 
-    if has_contract == Some(true) {
-        let chain: &str = deployer
-            .public()
-            .map_or("unknown", |p: &PublicClient| p.chain());
-        let network: &str = deployer
-            .public()
-            .map_or("mainnet", |p: &PublicClient| p.network());
-        info!(
-            "Contract '{}' already deployed at {:?} on {chain}",
-            spec.name, spec.address
-        );
+        if has_contract == Some(true) {
+            let chain: &str = deployer
+                .public()
+                .map_or("unknown", |p: &PublicClient| p.chain());
+            let network: &str = deployer
+                .public()
+                .map_or("mainnet", |p: &PublicClient| p.network());
+            info!(
+                "Contract '{}' already deployed at {:?} on {chain}",
+                spec.name, spec.address
+            );
 
-        if let Some(url) = addr_url(network, chain, &spec.address.unwrap_or_default().to_string()) {
-            warn!("Explorer: {url}");
+            if let Some(url) = addr_url(
+                network,
+                chain,
+                &spec.address.unwrap_or_default().to_string(),
+            ) {
+                warn!("Explorer: {url}");
+            }
+
+            ready_for_verify.push(deployer);
+            continue;
         }
-
-        ready_for_verify.push(deployer);
-        continue;
-    }
 
         needs_deploy.push(deployer);
     }

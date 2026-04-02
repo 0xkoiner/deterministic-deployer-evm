@@ -8,7 +8,7 @@ use alloy::rpc::types::{Block, Filter, Log, TransactionReceipt, TransactionReque
 use alloy::signers::local::PrivateKeySigner;
 use alloy::transports::http::reqwest::Url;
 
-use crate::types::config::{RpcConfig, PublicClient};
+use crate::types::config::{PublicClient, RpcConfig};
 use crate::types::errors::PublicClientError;
 use crate::utils::init_rpc::{config, get_rpc};
 

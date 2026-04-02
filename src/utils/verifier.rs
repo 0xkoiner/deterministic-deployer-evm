@@ -9,12 +9,12 @@ use alloy::primitives::{Address, hex};
 use alloy::transports::http::reqwest;
 use alloy::transports::http::reqwest::Client;
 use log::{error, info, warn};
-use tokio::time::sleep;
 use tokio::task::{JoinSet, spawn_blocking};
+use tokio::time::sleep;
 
+use crate::types::config::{ContractSpec, EtherscanResponse, PublicClient, WalletClient};
 use crate::types::constants::Constants;
 use crate::types::errors::VerifierError;
-use crate::types::config::{ PublicClient, WalletClient, ContractSpec, EtherscanResponse };
 
 const POLL_INTERVAL: Duration = Duration::from_secs(3);
 const MAX_POLL_ATTEMPTS: u32 = 20;
@@ -311,7 +311,9 @@ pub async fn run_verifications(ready_for_verify: &[WalletClient], spec: &Contrac
                 (None, _, _, _) => Err(VerifierError::MissingAddress(name)),
                 (_, None, _, _) => Err(VerifierError::MissingContractPath(name)),
                 (_, _, None, _) => Err(VerifierError::UnsupportedChain(chain.clone())),
-                (_, _, _, None) => Err(VerifierError::MissingEnvVar(Constants::ETHERSCAN_API_KEY_ENV)),
+                (_, _, _, None) => Err(VerifierError::MissingEnvVar(
+                    Constants::ETHERSCAN_API_KEY_ENV,
+                )),
             };
 
             match result {
@@ -327,4 +329,3 @@ pub async fn run_verifications(ready_for_verify: &[WalletClient], spec: &Contrac
         }
     }
 }
-
