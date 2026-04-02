@@ -3,6 +3,7 @@ use std::env::var;
 use std::fs::read_to_string;
 use std::process::Output;
 use std::time::Duration;
+use std::process::Command;
 
 use alloy::primitives::{Address, hex};
 use alloy::transports::http::reqwest;
@@ -67,6 +68,13 @@ fn etherscan_chain_id(chain: &str, network: &str) -> Option<u64> {
         ("mainnet", "zora") => Some(7_777_777),
         ("mainnet", "arbitrum_nova") => Some(42_170),
         ("mainnet", "polygon_zkevm") => Some(1101),
+        ("mainnet", "plasma") => Some(9745),
+        ("mainnet", "mantle") => Some(5000),
+        ("mainnet", "monad") => Some(143),
+        ("mainnet", "unichain") => Some(130),
+        ("mainnet", "celo") => Some(42220),
+        ("mainnet", "zksync") => Some(324),
+        ("mainnet", "soneium") => Some(1868),
         ("testnet", "sepolia") => Some(11_155_111),
         ("testnet", "base_sepolia") => Some(84_532),
         ("testnet", "arbitrum_sepolia") => Some(421_614),
@@ -86,7 +94,7 @@ fn verify_via_forge_sync(
     let addr_str: String = format!("{address}");
     let chain_str: String = chain_id.to_string();
 
-    let mut cmd = std::process::Command::new("forge");
+    let mut cmd: Command = Command::new("forge");
     cmd.args([
         "verify-contract",
         &addr_str,
