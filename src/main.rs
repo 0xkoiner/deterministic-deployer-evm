@@ -4,6 +4,7 @@ use log::{Level, error, warn};
 use std::env::var;
 use std::process::exit;
 
+use deterministic_deployer_evm::utils::print_intro::print_intro_log;
 use deterministic_deployer_evm::client::wallet_client::create_deployers;
 use deterministic_deployer_evm::data::contracts::create_contract_spec_from_args;
 use deterministic_deployer_evm::helpers::contract_searcher::resolve_contract;
@@ -51,6 +52,7 @@ fn init_logger() {
 
 #[tokio::main]
 async fn main() {
+    print_intro_log();
     init_logger();
     dotenv::dotenv().ok();
 
