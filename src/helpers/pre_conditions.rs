@@ -11,6 +11,7 @@ use crate::helpers::code_checker::has_code;
 use crate::types::constants::Constants;
 use crate::types::errors::CodeCheckerError;
 use crate::utils::create_2::verify_create2_address;
+use crate::utils::init_explorers::addr_url;
 use crate::utils::read_buf::CliArgs;
 
 pub struct PrecheckResult {
@@ -118,17 +119,25 @@ pub async fn run_prechecks(deployers: Vec<WalletClient>, spec: &ContractSpec) ->
             }
         }
 
-        if has_contract == Some(true) {
-            let chain: &str = deployer
-                .public()
-                .map_or("unknown", |p: &PublicClient| p.chain());
-            info!(
-                "Contract '{}' already deployed at {:?} on {chain}",
-                spec.name, spec.address
-            );
-            ready_for_verify.push(deployer);
-            continue;
+    if has_contract == Some(true) {
+        let chain: &str = deployer
+            .public()
+            .map_or("unknown", |p: &PublicClient| p.chain());
+        let network: &str = deployer
+            .public()
+            .map_or("mainnet", |p: &PublicClient| p.network());
+        info!(
+            "Contract '{}' already deployed at {:?} on {chain}",
+            spec.name, spec.address
+        );
+
+        if let Some(url) = addr_url(network, chain, &spec.address.unwrap_or_default().to_string()) {
+            warn!("Explorer: {url}");
         }
+
+        ready_for_verify.push(deployer);
+        continue;
+    }
 
         needs_deploy.push(deployer);
     }

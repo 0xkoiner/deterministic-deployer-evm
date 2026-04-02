@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 use std::env::var;
 use std::fs::read_to_string;
+use std::process::Command;
 use std::process::Output;
 use std::time::Duration;
-use std::process::Command;
 
 use alloy::primitives::{Address, hex};
 use alloy::transports::http::reqwest;
