@@ -1,4 +1,4 @@
-use alloy::primitives::{Address, B256, Bytes, FixedBytes};
+use alloy::primitives::{Bytes, FixedBytes};
 use log::{error, info};
 use std::path::PathBuf;
 use std::process::exit;
