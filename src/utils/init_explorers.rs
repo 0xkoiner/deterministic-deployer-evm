@@ -46,6 +46,7 @@ pub fn get_explorer<'a>(
     validate_chain(table, chain, network)
 }
 
+#[must_use]
 pub fn tx_url(network: &str, chain: &str, tx_hash: &str) -> Option<String> {
     let config: &ExplorerConfig = explorer_config();
     get_explorer(config, network, chain)
@@ -53,10 +54,10 @@ pub fn tx_url(network: &str, chain: &str, tx_hash: &str) -> Option<String> {
         .map(|base| format!("{base}tx/{tx_hash}"))
 }
 
+#[must_use]
 pub fn addr_url(network: &str, chain: &str, address: &str) -> Option<String> {
     let config: &ExplorerConfig = explorer_config();
     get_explorer(config, network, chain)
         .ok()
         .map(|base| format!("{base}address/{address}"))
-    
 }

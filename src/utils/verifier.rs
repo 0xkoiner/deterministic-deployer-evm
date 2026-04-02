@@ -8,9 +8,10 @@ use std::time::Duration;
 use alloy::primitives::{Address, hex};
 use alloy::transports::http::reqwest;
 use alloy::transports::http::reqwest::Client;
-use log::{info, warn};
+use log::{error, info, warn};
 use serde::Deserialize;
 use tokio::time::sleep;
+use tokio::task::{JoinSet, spawn_blocking};
 
 use crate::client::public_client::PublicClient;
 use crate::client::wallet_client::WalletClient;
@@ -178,7 +179,7 @@ pub async fn verify_contract(
         let name: &str = spec.name;
         let cargs: Option<&[u8]> = spec.constructor_args;
 
-        tokio::task::spawn_blocking(move || {
+        spawn_blocking(move || {
             verify_via_forge_sync(name, address, &contract_id, chain_id, &api_key, cargs)
         })
         .await
@@ -281,20 +282,58 @@ pub async fn run_verifications(ready_for_verify: &[WalletClient], spec: &Contrac
         ready_for_verify.len()
     );
 
+    let name: &'static str = spec.name;
+    let address: Option<Address> = spec.address;
+    let path: Option<&str> = spec.path;
+    let constructor_args: Option<&[u8]> = spec.constructor_args;
+
+    let api_key: Option<String> = var(Constants::ETHERSCAN_API_KEY_ENV).ok();
+
+    let mut verify_set: JoinSet<()> = JoinSet::new();
+
     for (i, deployer) in ready_for_verify.iter().enumerate() {
-        if i > 0 {
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-        }
         let chain: String = deployer
             .public()
             .map_or_else(|| "unknown".into(), |p| p.chain().to_string());
-        match verify_contract(deployer, spec).await {
-            Ok(status) => {
-                info!("Verified '{}' on {chain}: {status}", spec.name);
+        let network: &str = deployer.public().map_or("mainnet", |p| p.network());
+        let chain_key: &str = deployer.public().map_or("unknown", |p| p.chain());
+
+        let chain_id: Option<u64> = etherscan_chain_id(chain_key, network);
+        let api_key: Option<String> = api_key.clone();
+        let delay: u64 = i as u64;
+
+        verify_set.spawn(async move {
+            if delay > 0 {
+                sleep(Duration::from_secs(delay)).await;
             }
-            Err(e) => {
-                warn!("Etherscan verification failed on {chain}: {e}");
+
+            let result: Result<String, VerifierError> = match (address, path, chain_id, api_key) {
+                (Some(addr), Some(contract_path), Some(cid), Some(key)) => {
+                    let contract_id = format!("{contract_path}:{name}");
+                    spawn_blocking(move || {
+                        verify_via_forge_sync(name, addr, &contract_id, cid, &key, constructor_args)
+                    })
+                    .await
+                    .map_err(|e| VerifierError::VerificationFailed(name, e.to_string()))
+                    .and_then(|r| r)
+                }
+                (None, _, _, _) => Err(VerifierError::MissingAddress(name)),
+                (_, None, _, _) => Err(VerifierError::MissingContractPath(name)),
+                (_, _, None, _) => Err(VerifierError::UnsupportedChain(chain.clone())),
+                (_, _, _, None) => Err(VerifierError::MissingEnvVar(Constants::ETHERSCAN_API_KEY_ENV)),
+            };
+
+            match result {
+                Ok(status) => info!("Verified '{name}' on {chain}: {status}"),
+                Err(e) => warn!("Etherscan verification failed on {chain}: {e}"),
             }
+        });
+    }
+
+    while let Some(res) = verify_set.join_next().await {
+        if let Err(e) = res {
+            error!("Verification task panicked: {e}");
         }
     }
 }
+

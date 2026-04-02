@@ -19,7 +19,7 @@ monad = "https://monad.socialscan.io/"
 unichain = "https://uniscan.xyz/"
 celo = "https://celoscan.io/"
 zksync = "https://zksync.blockscout.com/"
-soneum = "https://soneium.blockscout.com/"
+soneium = "https://soneium.blockscout.com/"
 
 [testnet]
 sepolia = "https://sepolia.etherscan.io/"
