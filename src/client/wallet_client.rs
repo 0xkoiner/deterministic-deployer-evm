@@ -69,6 +69,7 @@ impl WalletClient {
     }
 }
 
+#[must_use]
 pub fn create_deployers(chains: &[Chain], private_key: &str) -> Vec<WalletClient> {
     let mut deployers: Vec<WalletClient> = Vec::with_capacity(chains.len());
     for chain in chains {

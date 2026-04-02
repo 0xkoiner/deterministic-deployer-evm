@@ -13,6 +13,7 @@ use crate::helpers::balance_checker::check_balance;
 use crate::helpers::code_checker::has_code;
 use crate::types::constants::Constants;
 use crate::types::errors::DeployError;
+use crate::utils::init_explorers::tx_url;
 
 fn build_calldata(salt: &B256, init_code: &Bytes) -> Bytes {
     let mut buf: Vec<u8> = Vec::with_capacity(32 + init_code.len());
@@ -117,7 +118,15 @@ pub async fn run_deployments(
     while let Some(res) = deploy_set.join_next().await {
         match res {
             Ok(Ok((chain, tx_hash, deployer))) => {
+                let network: &str = deployer.public().map_or("mainnet", |p| p.network());
+                let tx_str: String = format!("{tx_hash}");
+
                 info!("Deployed '{}' on {chain} — tx: {tx_hash}", spec.name);
+
+                if let Some(url) = tx_url(network, &chain, &tx_str) {
+                    warn!("Explorer: {url}");
+                }
+
                 successful_deployed.push(deployer);
             }
             Ok(Err(e)) => {

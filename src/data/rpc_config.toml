@@ -13,6 +13,14 @@ polygon_zkevm = "https://polygon-zkevm-public.nodies.app"
 gnosis = "https://gnosis-rpc.publicnode.com"
 scroll = "https://scroll-rpc.publicnode.com"
 linea = "https://linea-rpc.publicnode.com"
+plasma = "https://plasma.drpc.org"
+mantle = "https://mantle-rpc.publicnode.com"
+monad = "https://monad-mainnet.drpc.org"
+unichain = "https://unichain-rpc.publicnode.com"
+celo = "https://celo.drpc.org"
+zksync = "https://zksync.drpc.org"
+soneium = "https://soneium.drpc.org"
+
 
 [testnet]
 sepolia = "https://ethereum-sepolia-rpc.publicnode.com"

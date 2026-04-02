@@ -79,7 +79,7 @@ pub fn load_keystore() -> Result<String> {
     let dir: &Path = Path::new(Constants::KEYSTORE_DIR);
 
     let entries: Vec<String> = read_dir(dir)?
-        .filter_map(|e| e.ok())
+        .filter_map(Result::ok)
         .filter_map(|e| e.file_name().to_str().map(String::from))
         .filter(|name| name.starts_with("ks-"))
         .collect();
@@ -122,7 +122,7 @@ pub fn load_or_create_keystore() -> Result<String> {
     let dir: &Path = Path::new(Constants::KEYSTORE_DIR);
     let has_keystores: bool = dir.is_dir()
         && read_dir(dir)?
-            .filter_map(|e| e.ok())
+            .filter_map(Result::ok)
             .any(|e| e.file_name().to_str().is_some_and(|n| n.starts_with("ks-")));
 
     if has_keystores {

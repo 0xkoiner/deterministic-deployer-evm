@@ -143,3 +143,15 @@ pub enum ArtifactError {
     #[error("Empty bytecode in artifact for '{0}'")]
     EmptyBytecode(String),
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum ExplorerError {
+    #[error("Failed to read explorer config: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("Failed to parse explorer TOML: {0}")]
+    ParseError(#[from] toml::de::Error),
+    #[error("Unknown network: {0}")]
+    UnknownNetwork(String),
+    #[error("Chain {0} not found in {1}")]
+    ChainNotFound(String, String),
+}

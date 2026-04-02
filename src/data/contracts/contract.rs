@@ -1,6 +1,6 @@
 use alloy::primitives::{Address, B256, Bytes, FixedBytes};
 use log::{error, info};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::exit;
 
 use crate::data::contracts::build_contract_spec_from_args;
@@ -21,22 +21,6 @@ pub struct ContractSpec {
 }
 
 impl ContractSpec {
-    pub fn source_path(&self) -> Option<&Path> {
-        self.path.map(Path::new)
-    }
-
-    pub fn verify_path(&self) -> Option<&Path> {
-        self.verify_json_path.map(Path::new)
-    }
-
-    pub fn deployed_bytes(&self) -> Option<Bytes> {
-        self.deployer_tx.map(Bytes::copy_from_slice)
-    }
-
-    pub fn constructor_args_bytes(&self) -> Option<Bytes> {
-        self.constructor_args.map(Bytes::copy_from_slice)
-    }
-
     pub fn full_init_code(&self) -> Option<Bytes> {
         let creation: &[u8] = self.creation_bytecode?;
         let args_len: usize = self.constructor_args.map_or(0, <[u8]>::len);
