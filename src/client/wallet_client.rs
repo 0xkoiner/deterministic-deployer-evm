@@ -5,20 +5,13 @@ use std::process::exit;
 use alloy::primitives::Address;
 use alloy::signers::local::{LocalSignerError, PrivateKeySigner};
 
-use crate::client::public_client::PublicClient;
+use crate::types::config::{ PublicClient, WalletClient, Chain };
 use crate::types::constants::Constants;
 use crate::types::errors::WalletError;
-use crate::utils::read_buf::Chain;
 
 fn parse_signer(hex: &str) -> Result<PrivateKeySigner, WalletError> {
     hex.parse()
         .map_err(|e: LocalSignerError| WalletError::InvalidPrivateKey(e.to_string()))
-}
-
-#[derive(Debug)]
-pub struct WalletClient {
-    signer: PrivateKeySigner,
-    public: Option<PublicClient>,
 }
 
 impl WalletClient {

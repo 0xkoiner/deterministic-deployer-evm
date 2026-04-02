@@ -4,18 +4,16 @@ use log::{Level, error, warn};
 use std::env::var;
 use std::process::exit;
 
-use deterministic_deployer_evm::client::wallet_client::{WalletClient, create_deployers};
-use deterministic_deployer_evm::data::ContractSpec;
+use deterministic_deployer_evm::client::wallet_client::create_deployers;
+use deterministic_deployer_evm::types::config::{ContractSpec, WalletClient, CliArgs, PrecheckResult};
 use deterministic_deployer_evm::data::contracts::create_contract_spec_from_args;
 use deterministic_deployer_evm::helpers::contract_searcher::resolve_contract;
-use deterministic_deployer_evm::helpers::pre_conditions::{
-    PrecheckResult, check_before, log_info, run_prechecks,
-};
+use deterministic_deployer_evm::helpers::pre_conditions::{check_before, log_info, run_prechecks};
 use deterministic_deployer_evm::types::constants::Constants;
 use deterministic_deployer_evm::types::errors::CliError;
 use deterministic_deployer_evm::utils::create_keystore::load_or_create_keystore;
 use deterministic_deployer_evm::utils::deploy::run_deployments;
-use deterministic_deployer_evm::utils::read_buf::{CliArgs, parse_args};
+use deterministic_deployer_evm::utils::read_buf::parse_args;
 use deterministic_deployer_evm::utils::verifier::run_verifications;
 
 fn parse_pk() -> String {

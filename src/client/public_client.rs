@@ -8,7 +8,7 @@ use alloy::rpc::types::{Block, Filter, Log, TransactionReceipt, TransactionReque
 use alloy::signers::local::PrivateKeySigner;
 use alloy::transports::http::reqwest::Url;
 
-use crate::types::config::RpcConfig;
+use crate::types::config::{RpcConfig, PublicClient};
 use crate::types::errors::PublicClientError;
 use crate::utils::init_rpc::{config, get_rpc};
 
@@ -21,14 +21,6 @@ fn build_provider(url: &str) -> Result<DynProvider, PublicClientError> {
         .parse()
         .map_err(|e| PublicClientError::InvalidUrl(format!("{e}")))?;
     Ok(ProviderBuilder::new().connect_http(parsed).erased())
-}
-
-#[derive(Debug)]
-pub struct PublicClient {
-    provider: DynProvider,
-    chain: &'static str,
-    network: &'static str,
-    rpc_url: Cow<'static, str>,
 }
 
 impl PublicClient {

@@ -4,20 +4,12 @@ use tokio::task::JoinSet;
 
 use alloy::primitives::Address;
 
-use crate::client::public_client::PublicClient;
-use crate::client::wallet_client::WalletClient;
-use crate::data::contracts::ContractSpec;
 use crate::helpers::code_checker::has_code;
 use crate::types::constants::Constants;
 use crate::types::errors::CodeCheckerError;
 use crate::utils::create_2::verify_create2_address;
 use crate::utils::init_explorers::addr_url;
-use crate::utils::read_buf::CliArgs;
-
-pub struct PrecheckResult {
-    pub needs_deploy: Vec<WalletClient>,
-    pub ready_for_verify: Vec<WalletClient>,
-}
+use crate::types::config::{PublicClient, WalletClient, PrecheckResult, CliArgs, ContractSpec};
 
 pub fn log_info(args: &CliArgs) {
     if let Some(ref contract_path) = args.contract_path {

@@ -1,18 +1,8 @@
 use alloy::primitives::{Bytes, hex};
-use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+use crate::types::config::ForgeArtifact;
 use crate::types::errors::ArtifactError;
-
-#[derive(Deserialize)]
-struct BytecodeObject {
-    object: String,
-}
-
-#[derive(Deserialize)]
-struct ForgeArtifact {
-    bytecode: BytecodeObject,
-}
 
 pub fn read_creation_bytecode(
     contract_path: &Path,

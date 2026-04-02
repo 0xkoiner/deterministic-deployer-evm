@@ -1,8 +1,6 @@
 use alloy::primitives::{Address, U256};
 
-use crate::client::public_client::PublicClient;
-
-use crate::client::wallet_client::WalletClient;
+use crate::types::config::{PublicClient, WalletClient};
 use crate::types::errors::BalanceCheckerError;
 
 pub async fn check_balance(wallet: &WalletClient) -> Result<U256, BalanceCheckerError> {

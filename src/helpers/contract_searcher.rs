@@ -1,5 +1,5 @@
-use crate::data::contracts::{ContractSpec, find_by_address, find_by_name, find_by_path};
-use crate::utils::read_buf::CliArgs;
+use crate::data::contracts::{find_by_address, find_by_name, find_by_path};
+use crate::types::config::{CliArgs, ContractSpec};
 
 #[must_use]
 pub fn resolve_contract(args: &CliArgs) -> Option<&'static ContractSpec> {

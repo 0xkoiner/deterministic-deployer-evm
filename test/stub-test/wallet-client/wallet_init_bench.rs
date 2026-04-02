@@ -1,5 +1,5 @@
 use criterion::{Criterion, criterion_group, criterion_main};
-use deterministic_deployer_evm::client::wallet_client::WalletClient;
+use deterministic_deployer_evm::types::config::WalletClient;
 
 const TEST_PRIVATE_KEY: &str = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 

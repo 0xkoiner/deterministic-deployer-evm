@@ -1,4 +1,4 @@
-use deterministic_deployer_evm::client::wallet_client::WalletClient;
+use deterministic_deployer_evm::types::config::WalletClient;
 use serial_test::serial;
 
 // Valid Anvil test private key (do NOT use in production)

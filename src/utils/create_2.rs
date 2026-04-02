@@ -1,6 +1,6 @@
 use alloy::primitives::{Address, B256, Bytes, FixedBytes, keccak256};
 
-use crate::data::contracts::ContractSpec;
+use crate::types::config::ContractSpec;
 use crate::types::constants::Constants;
 use crate::types::errors::Create2Error;
 

@@ -4,39 +4,8 @@ use std::path::PathBuf;
 use std::process::exit;
 
 use crate::types::errors::CliError;
+use crate::types::config::{Chain, ChainSet, CliArgs};
 use alloy::primitives::{Address, B256, Bytes, U256, hex};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(u8)]
-pub enum Chain {
-    // mainnets
-    Ethereum = 0,
-    Base = 1,
-    Arbitrum = 2,
-    Bnb = 3,
-    Avalanche = 4,
-    Polygon = 5,
-    Sonic = 6,
-    Optimism = 7,
-    Zora = 8,
-    ArbitrumNova = 9,
-    PolygonZkevm = 10,
-    Gnosis = 11,
-    Scroll = 12,
-    Linea = 13,
-    Plasma = 14,
-    Mantle = 15,
-    Monad = 16,
-    Unichain = 17,
-    Celo = 18,
-    Zksync = 19,
-    Soneium = 20,
-    // testnets
-    Sepolia = 21,
-    BaseSepolia = 22,
-    ArbitrumSepolia = 23,
-    OptimismSepolia = 24,
-}
 
 impl Chain {
     pub const COUNT: usize = 25;
@@ -165,7 +134,6 @@ impl Display for Chain {
     }
 }
 
-struct ChainSet(u32);
 
 impl ChainSet {
     const fn new() -> Self {
@@ -189,17 +157,6 @@ fn parse_salt(input: &str) -> Result<B256, CliError> {
     let num: U256 = U256::from_str_radix(input, 10)
         .map_err(|e| CliError::InvalidSalt(format!("not valid hex or uint256: {e}")))?;
     Ok(B256::from(num.to_be_bytes::<32>()))
-}
-
-pub struct CliArgs {
-    pub contract_path: Option<PathBuf>,
-    pub chains: Vec<Chain>,
-    pub salt: Option<B256>,
-    pub contract_name: Option<String>,
-    pub address: Option<Address>,
-    pub verify: bool,
-    pub constructor_args: Option<Bytes>,
-    pub keystore: bool,
 }
 
 pub fn parse_args() -> Result<CliArgs, CliError> {

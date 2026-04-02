@@ -9,24 +9,15 @@ use alloy::primitives::{Address, hex};
 use alloy::transports::http::reqwest;
 use alloy::transports::http::reqwest::Client;
 use log::{error, info, warn};
-use serde::Deserialize;
 use tokio::time::sleep;
 use tokio::task::{JoinSet, spawn_blocking};
 
-use crate::client::public_client::PublicClient;
-use crate::client::wallet_client::WalletClient;
-use crate::data::contracts::ContractSpec;
 use crate::types::constants::Constants;
 use crate::types::errors::VerifierError;
+use crate::types::config::{ PublicClient, WalletClient, ContractSpec, EtherscanResponse };
 
 const POLL_INTERVAL: Duration = Duration::from_secs(3);
 const MAX_POLL_ATTEMPTS: u32 = 20;
-
-#[derive(Deserialize)]
-struct EtherscanResponse {
-    status: String,
-    result: String,
-}
 
 fn url_encode(s: &str) -> String {
     let mut out: String = String::with_capacity(s.len() * 3);
