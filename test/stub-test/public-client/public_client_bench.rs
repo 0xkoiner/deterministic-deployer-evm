@@ -1,7 +1,7 @@
 use alloy::eips::BlockNumberOrTag;
 use alloy::primitives::Address;
 use criterion::{Criterion, criterion_group, criterion_main};
-use deterministic_deployer_evm::client::public_client::PublicClient;
+use deterministic_deployer_evm::types::config::PublicClient;
 use tokio::runtime::Runtime;
 
 const RPC_URL: &str = "https://ethereum-rpc.publicnode.com";

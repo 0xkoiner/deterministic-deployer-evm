@@ -4,18 +4,19 @@ use log::{Level, error, warn};
 use std::env::var;
 use std::process::exit;
 
-use deterministic_deployer_evm::client::wallet_client::{WalletClient, create_deployers};
-use deterministic_deployer_evm::data::ContractSpec;
+use deterministic_deployer_evm::utils::print_intro::print_intro_log;
+use deterministic_deployer_evm::client::wallet_client::create_deployers;
 use deterministic_deployer_evm::data::contracts::create_contract_spec_from_args;
 use deterministic_deployer_evm::helpers::contract_searcher::resolve_contract;
-use deterministic_deployer_evm::helpers::pre_conditions::{
-    PrecheckResult, check_before, log_info, run_prechecks,
+use deterministic_deployer_evm::helpers::pre_conditions::{check_before, log_info, run_prechecks};
+use deterministic_deployer_evm::types::config::{
+    CliArgs, ContractSpec, PrecheckResult, WalletClient,
 };
 use deterministic_deployer_evm::types::constants::Constants;
 use deterministic_deployer_evm::types::errors::CliError;
 use deterministic_deployer_evm::utils::create_keystore::load_or_create_keystore;
 use deterministic_deployer_evm::utils::deploy::run_deployments;
-use deterministic_deployer_evm::utils::read_buf::{CliArgs, parse_args};
+use deterministic_deployer_evm::utils::read_buf::parse_args;
 use deterministic_deployer_evm::utils::verifier::run_verifications;
 
 fn parse_pk() -> String {
@@ -51,6 +52,7 @@ fn init_logger() {
 
 #[tokio::main]
 async fn main() {
+    print_intro_log();
     init_logger();
     dotenv::dotenv().ok();
 

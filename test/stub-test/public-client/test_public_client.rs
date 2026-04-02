@@ -1,6 +1,6 @@
 use alloy::eips::BlockNumberOrTag;
 use alloy::primitives::{Address, U256, address};
-use deterministic_deployer_evm::client::public_client::PublicClient;
+use deterministic_deployer_evm::types::config::PublicClient;
 
 // ── Constructor Tests ───────────────────────────────────
 

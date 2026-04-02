@@ -1,24 +1,12 @@
-use alloy::primitives::{Address, B256, Bytes, FixedBytes};
+use alloy::primitives::{Bytes, FixedBytes};
 use log::{error, info};
 use std::path::PathBuf;
 use std::process::exit;
 
 use crate::data::contracts::build_contract_spec_from_args;
+use crate::types::config::{CliArgs, ContractSpec};
 use crate::types::errors::ArtifactError;
 use crate::utils::artifact::read_creation_bytecode;
-use crate::utils::read_buf::CliArgs;
-
-#[derive(Debug, Clone, Copy)]
-pub struct ContractSpec {
-    pub name: &'static str,
-    pub address: Option<Address>,
-    pub salt: Option<B256>,
-    pub path: Option<&'static str>,
-    pub deployer_tx: Option<&'static [u8]>,
-    pub constructor_args: Option<&'static [u8]>,
-    pub creation_bytecode: Option<&'static [u8]>,
-    pub verify_json_path: Option<&'static str>,
-}
 
 impl ContractSpec {
     pub fn full_init_code(&self) -> Option<Bytes> {

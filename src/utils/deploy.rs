@@ -6,11 +6,9 @@ use alloy::primitives::{Address, B256, Bytes, FixedBytes};
 use alloy::providers::{PendingTransactionBuilder, Provider};
 use alloy::rpc::types::{TransactionReceipt, TransactionRequest};
 
-use crate::client::public_client::PublicClient;
-use crate::client::wallet_client::WalletClient;
-use crate::data::contracts::ContractSpec;
 use crate::helpers::balance_checker::check_balance;
 use crate::helpers::code_checker::has_code;
+use crate::types::config::{ContractSpec, PublicClient, WalletClient};
 use crate::types::constants::Constants;
 use crate::types::errors::DeployError;
 use crate::utils::init_explorers::tx_url;

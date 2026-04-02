@@ -1,6 +1,6 @@
 use alloy::primitives::{Address, B256, Bytes, address, b256, hex};
 
-use super::contract::ContractSpec;
+use crate::types::config::ContractSpec;
 use crate::types::constants::Constants;
 use crate::utils::create_2::compute_create2_address;
 
