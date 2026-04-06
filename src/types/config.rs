@@ -42,7 +42,6 @@ pub struct ContractSpec {
     pub deployer_tx: Option<&'static [u8]>,
     pub constructor_args: Option<&'static [u8]>,
     pub creation_bytecode: Option<&'static [u8]>,
-    pub verify_json_path: Option<&'static str>,
 }
 
 #[derive(Deserialize)]

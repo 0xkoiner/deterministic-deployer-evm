@@ -114,8 +114,6 @@ pub enum VerifierError {
     MissingAddress(&'static str),
     #[error("Missing contract source path for '{0}'")]
     MissingContractPath(&'static str),
-    #[error("Failed to read verify JSON for '{0}': {1}")]
-    ReadFailed(&'static str, String),
     #[error("Missing env var: {0}")]
     MissingEnvVar(&'static str),
     #[error("Unsupported chain for verification: {0}")]

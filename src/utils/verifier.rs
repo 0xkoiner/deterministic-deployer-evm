@@ -1,7 +1,6 @@
 use serde_json::{Map, Value, from_str};
 use std::borrow::Cow;
 use std::env::var;
-use std::fs::read_to_string;
 use std::process::Command;
 use std::process::Output;
 use std::sync::Arc;
@@ -301,86 +300,15 @@ pub async fn verify_contract(
     let api_key: String = var(Constants::ETHERSCAN_API_KEY_ENV)
         .map_err(|_| VerifierError::MissingEnvVar(Constants::ETHERSCAN_API_KEY_ENV))?;
 
-    if let Some(verify_path) = spec.verify_json_path {
-        verify_via_etherscan_api(
-            spec,
-            address,
-            contract_path,
-            chain,
-            chain_id,
-            &api_key,
-            verify_path,
-        )
-        .await
-    } else {
-        let contract_id: String = format!("{contract_path}:{}", spec.name);
-        let name: &str = spec.name;
-        let cargs: Option<&[u8]> = spec.constructor_args;
+    let contract_id: String = format!("{contract_path}:{}", spec.name);
+    let name: &str = spec.name;
+    let cargs: Option<&[u8]> = spec.constructor_args;
 
-        spawn_blocking(move || {
-            verify_via_forge_sync(name, address, &contract_id, chain_id, &api_key, cargs)
-        })
-        .await
-        .map_err(|e| VerifierError::VerificationFailed(spec.name, e.to_string()))?
-    }
-}
-
-async fn verify_via_etherscan_api(
-    spec: &ContractSpec,
-    address: Address,
-    contract_path: &str,
-    chain: &str,
-    chain_id: u64,
-    api_key: &str,
-    verify_path: &str,
-) -> Result<String, VerifierError> {
-    let compiler_version: String = var(Constants::SOLC_VERSION_ENV)
-        .map_err(|_| VerifierError::MissingEnvVar(Constants::SOLC_VERSION_ENV))?;
-
-    let source_code: String = read_to_string(verify_path)
-        .map_err(|e| VerifierError::ReadFailed(spec.name, e.to_string()))?;
-
-    let contract_name: String = format!("{contract_path}:{}", spec.name);
-    let constructor_args: String = spec.constructor_args.map(hex::encode).unwrap_or_default();
-
-    let client: Client = reqwest::Client::new();
-    let submit_url: String = format!(
-        "{}?module=contract&action=verifysourcecode&chainid={chain_id}&apikey={api_key}",
-        Constants::ETHERSCAN_V2_URL
-    );
-
-    let addr_str: String = format!("{address}");
-    let body: String = build_form_body(&[
-        ("contractaddress", &addr_str),
-        ("sourceCode", &source_code),
-        ("codeformat", "solidity-standard-json-input"),
-        ("contractname", &contract_name),
-        ("compilerversion", &compiler_version),
-        ("constructorArguements", &constructor_args),
-    ]);
-
-    let resp: EtherscanResponse = client
-        .post(&submit_url)
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body(body)
-        .send()
-        .await
-        .map_err(|e| VerifierError::HttpError(spec.name, e.to_string()))?
-        .json()
-        .await
-        .map_err(|e| VerifierError::HttpError(spec.name, e.to_string()))?;
-
-    if resp.status != "1" {
-        return Err(VerifierError::SubmissionFailed(spec.name, resp.result));
-    }
-
-    let guid: String = resp.result;
-    info!(
-        "Verification submitted for '{}' on {chain} (guid: {guid})",
-        spec.name
-    );
-
-    poll_verification_status(&client, chain_id, api_key, &guid, spec.name).await
+    spawn_blocking(move || {
+        verify_via_forge_sync(name, address, &contract_id, chain_id, &api_key, cargs)
+    })
+    .await
+    .map_err(|e| VerifierError::VerificationFailed(spec.name, e.to_string()))?
 }
 
 pub async fn run_verifications(
