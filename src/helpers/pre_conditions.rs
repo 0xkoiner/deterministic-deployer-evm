@@ -40,7 +40,6 @@ pub fn check_before(contract_to_deploy: Option<&ContractSpec>, args: &CliArgs) {
         info!("Resolved contract: {}", spec.name);
         info!("Address contract: {:?}", spec.address);
         info!("Path contract: {:?}", spec.path);
-        info!("verify_json_path contract: {:?}", spec.verify_json_path);
         info!("salt contract: {:?}", spec.salt);
 
         if spec.deployer_tx.is_some() {
