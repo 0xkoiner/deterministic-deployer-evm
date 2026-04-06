@@ -28,12 +28,15 @@ pub async fn deploy_contract(
         .public()
         .ok_or_else(|| DeployError::NoProvider(wallet.address()))?;
 
-    let salt: FixedBytes<32> = spec.salt.ok_or(DeployError::MissingSalt(spec.name))?;
-    let init_code: Bytes = spec
-        .full_init_code()
-        .ok_or(DeployError::MissingInitCode(spec.name))?;
-
-    let calldata: Bytes = build_calldata(&salt, &init_code);
+    let calldata: Bytes = if let Some(tx_data) = spec.deployer_tx {
+        Bytes::copy_from_slice(tx_data)
+    } else {
+        let salt: FixedBytes<32> = spec.salt.ok_or(DeployError::MissingSalt(spec.name))?;
+        let init_code: Bytes = spec
+            .full_init_code()
+            .ok_or(DeployError::MissingInitCode(spec.name))?;
+        build_calldata(&salt, &init_code)
+    };
 
     let tx: TransactionRequest = TransactionRequest::default()
         .with_to(*Constants::DETERMINISTIC_DEPLOYER)
