@@ -289,7 +289,9 @@ fn print_usage() {
     eprintln!("  --address <hex>         Contract address (hex, with or without 0x)");
     eprintln!("  --verify                Enable contract verification");
     eprintln!("  --keystore              Create and use an encrypted keystore");
-    eprintln!("  --source-chain <chain>  Chain with verified source (for cross-chain verification)");
+    eprintln!(
+        "  --source-chain <chain>  Chain with verified source (for cross-chain verification)"
+    );
     eprintln!(
         "  --constructor-args <hex> ABI-encoded constructor arguments (hex, with or without 0x)"
     );

@@ -24,7 +24,6 @@ const INTRO: &str = r"
    (_______|    |_______)
 ";
 
-
 pub fn print_intro_log() {
     println!("\x1b[32m{INTRO}\x1b[0m");
 }

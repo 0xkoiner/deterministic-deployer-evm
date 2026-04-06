@@ -1,3 +1,4 @@
+use serde_json::{Map, Value, from_str};
 use std::borrow::Cow;
 use std::env::var;
 use std::fs::read_to_string;
@@ -5,7 +6,6 @@ use std::process::Command;
 use std::process::Output;
 use std::sync::Arc;
 use std::time::Duration;
-use serde_json::{Value, Map, from_str};
 
 use alloy::primitives::{Address, hex};
 use alloy::transports::http::reqwest;
@@ -14,7 +14,10 @@ use log::{error, info, warn};
 use tokio::task::{JoinSet, spawn_blocking};
 use tokio::time::sleep;
 
-use crate::types::config::{Chain, ContractSpec, EtherscanResponse, PublicClient, WalletClient, SourceCodeResult, GetSourceCodeResponse};
+use crate::types::config::{
+    Chain, ContractSpec, EtherscanResponse, GetSourceCodeResponse, PublicClient, SourceCodeResult,
+    WalletClient,
+};
 use crate::types::constants::Constants;
 use crate::types::errors::VerifierError;
 
@@ -25,10 +28,7 @@ fn find_contract_file(source_json: &str, contract_name: &str) -> Option<String> 
     let parsed: Value = from_str(source_json).ok()?;
     let sources: &Map<String, Value> = parsed.get("sources")?.as_object()?;
     let suffix: String = format!("{contract_name}.sol");
-    sources
-        .keys()
-        .find(|k| k.ends_with(&suffix))
-        .cloned()
+    sources.keys().find(|k| k.ends_with(&suffix)).cloned()
 }
 
 async fn fetch_verified_source(
@@ -53,14 +53,21 @@ async fn fetch_verified_source(
         .map_err(|e| VerifierError::HttpError(name, e.to_string()))?;
 
     if resp.status != "1" || resp.result.is_empty() {
-        return Err(VerifierError::NotVerifiedOnSource(format!("chain_id {chain_id}")));
+        return Err(VerifierError::NotVerifiedOnSource(format!(
+            "chain_id {chain_id}"
+        )));
     }
 
-    let mut source: SourceCodeResult = resp.result.into_iter().next()
+    let mut source: SourceCodeResult = resp
+        .result
+        .into_iter()
+        .next()
         .ok_or_else(|| VerifierError::NotVerifiedOnSource(format!("chain_id {chain_id}")))?;
 
     if source.source_code.is_empty() || source.contract_name.is_empty() {
-        return Err(VerifierError::NotVerifiedOnSource(format!("chain_id {chain_id}")));
+        return Err(VerifierError::NotVerifiedOnSource(format!(
+            "chain_id {chain_id}"
+        )));
     }
 
     if source.source_code.starts_with("{{") && source.source_code.ends_with("}}") {
@@ -68,7 +75,8 @@ async fn fetch_verified_source(
     }
 
     if !source.contract_name.contains(':') {
-        let contract_file: Option<String> = find_contract_file(&source.source_code, &source.contract_name);
+        let contract_file: Option<String> =
+            find_contract_file(&source.source_code, &source.contract_name);
         if let Some(file) = contract_file {
             source.contract_name = format!("{file}:{}", source.contract_name);
         }
