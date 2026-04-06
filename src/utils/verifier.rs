@@ -1,8 +1,10 @@
+use serde_json::{Map, Value, from_str};
 use std::borrow::Cow;
 use std::env::var;
 use std::fs::read_to_string;
 use std::process::Command;
 use std::process::Output;
+use std::sync::Arc;
 use std::time::Duration;
 
 use alloy::primitives::{Address, hex};
@@ -12,12 +14,157 @@ use log::{error, info, warn};
 use tokio::task::{JoinSet, spawn_blocking};
 use tokio::time::sleep;
 
-use crate::types::config::{ContractSpec, EtherscanResponse, PublicClient, WalletClient};
+use crate::types::config::{
+    Chain, ContractSpec, EtherscanResponse, GetSourceCodeResponse, PublicClient, SourceCodeResult,
+    WalletClient,
+};
 use crate::types::constants::Constants;
 use crate::types::errors::VerifierError;
 
 const POLL_INTERVAL: Duration = Duration::from_secs(3);
 const MAX_POLL_ATTEMPTS: u32 = 20;
+
+fn find_contract_file(source_json: &str, contract_name: &str) -> Option<String> {
+    let parsed: Value = from_str(source_json).ok()?;
+    let sources: &Map<String, Value> = parsed.get("sources")?.as_object()?;
+    let suffix: String = format!("{contract_name}.sol");
+    sources.keys().find(|k| k.ends_with(&suffix)).cloned()
+}
+
+async fn fetch_verified_source(
+    api_key: &str,
+    chain_id: u64,
+    address: Address,
+    name: &'static str,
+) -> Result<SourceCodeResult, VerifierError> {
+    let url: String = format!(
+        "{}?module=contract&action=getsourcecode&address={address}&chainid={chain_id}&apikey={api_key}",
+        Constants::ETHERSCAN_V2_URL
+    );
+
+    let client: Client = reqwest::Client::new();
+    let resp: GetSourceCodeResponse = client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| VerifierError::HttpError(name, e.to_string()))?
+        .json()
+        .await
+        .map_err(|e| VerifierError::HttpError(name, e.to_string()))?;
+
+    if resp.status != "1" || resp.result.is_empty() {
+        return Err(VerifierError::NotVerifiedOnSource(format!(
+            "chain_id {chain_id}"
+        )));
+    }
+
+    let mut source: SourceCodeResult = resp
+        .result
+        .into_iter()
+        .next()
+        .ok_or_else(|| VerifierError::NotVerifiedOnSource(format!("chain_id {chain_id}")))?;
+
+    if source.source_code.is_empty() || source.contract_name.is_empty() {
+        return Err(VerifierError::NotVerifiedOnSource(format!(
+            "chain_id {chain_id}"
+        )));
+    }
+
+    if source.source_code.starts_with("{{") && source.source_code.ends_with("}}") {
+        source.source_code = source.source_code[1..source.source_code.len() - 1].to_string();
+    }
+
+    if !source.contract_name.contains(':') {
+        let contract_file: Option<String> =
+            find_contract_file(&source.source_code, &source.contract_name);
+        if let Some(file) = contract_file {
+            source.contract_name = format!("{file}:{}", source.contract_name);
+        }
+    }
+
+    Ok(source)
+}
+
+async fn verify_cross_chain(
+    api_key: &str,
+    source: &SourceCodeResult,
+    target_chain_id: u64,
+    address: Address,
+    name: &'static str,
+    chain: &str,
+) -> Result<String, VerifierError> {
+    let client: Client = reqwest::Client::new();
+    let submit_url: String = format!(
+        "{}?module=contract&action=verifysourcecode&chainid={target_chain_id}&apikey={api_key}",
+        Constants::ETHERSCAN_V2_URL
+    );
+
+    let addr_str: String = format!("{address}");
+    let body: String = build_form_body(&[
+        ("contractaddress", &addr_str),
+        ("sourceCode", &source.source_code),
+        ("codeformat", "solidity-standard-json-input"),
+        ("contractname", &source.contract_name),
+        ("compilerversion", &source.compiler_version),
+        ("constructorArguements", &source.constructor_arguments),
+    ]);
+
+    let resp: EtherscanResponse = client
+        .post(&submit_url)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .body(body)
+        .send()
+        .await
+        .map_err(|e| VerifierError::HttpError(name, e.to_string()))?
+        .json()
+        .await
+        .map_err(|e| VerifierError::HttpError(name, e.to_string()))?;
+
+    if resp.status != "1" {
+        return Err(VerifierError::SubmissionFailed(name, resp.result));
+    }
+
+    let guid: String = resp.result;
+    warn!("Cross-chain verification submitted for '{name}' on {chain} (guid: {guid})");
+
+    poll_verification_status(&client, target_chain_id, api_key, &guid, name).await
+}
+
+async fn poll_verification_status(
+    client: &Client,
+    chain_id: u64,
+    api_key: &str,
+    guid: &str,
+    name: &'static str,
+) -> Result<String, VerifierError> {
+    let status_url: String = format!(
+        "{}?module=contract&action=checkverifystatus&guid={guid}&chainid={chain_id}&apikey={api_key}",
+        Constants::ETHERSCAN_V2_URL
+    );
+
+    for _ in 0..MAX_POLL_ATTEMPTS {
+        sleep(POLL_INTERVAL).await;
+
+        let status: EtherscanResponse = client
+            .get(&status_url)
+            .send()
+            .await
+            .map_err(|e| VerifierError::HttpError(name, e.to_string()))?
+            .json()
+            .await
+            .map_err(|e| VerifierError::HttpError(name, e.to_string()))?;
+
+        if status.result.contains("Pass") || status.result.contains("Already Verified") {
+            return Ok(status.result);
+        }
+
+        if status.result.contains("Fail") {
+            return Err(VerifierError::VerificationFailed(name, status.result));
+        }
+    }
+
+    Err(VerifierError::Timeout(name, guid.to_string()))
+}
 
 fn url_encode(s: &str) -> String {
     let mut out: String = String::with_capacity(s.len() * 3);
@@ -233,36 +380,14 @@ async fn verify_via_etherscan_api(
         spec.name
     );
 
-    let status_url: String = format!(
-        "{}?module=contract&action=checkverifystatus&guid={guid}&chainid={chain_id}&apikey={api_key}",
-        Constants::ETHERSCAN_V2_URL
-    );
-
-    for _ in 0..MAX_POLL_ATTEMPTS {
-        sleep(POLL_INTERVAL).await;
-
-        let status: EtherscanResponse = client
-            .get(&status_url)
-            .send()
-            .await
-            .map_err(|e| VerifierError::HttpError(spec.name, e.to_string()))?
-            .json()
-            .await
-            .map_err(|e| VerifierError::HttpError(spec.name, e.to_string()))?;
-
-        if status.result.contains("Pass") || status.result.contains("Already Verified") {
-            return Ok(status.result);
-        }
-
-        if status.result.contains("Fail") {
-            return Err(VerifierError::VerificationFailed(spec.name, status.result));
-        }
-    }
-
-    Err(VerifierError::Timeout(spec.name, guid))
+    poll_verification_status(&client, chain_id, api_key, &guid, spec.name).await
 }
 
-pub async fn run_verifications(ready_for_verify: &[WalletClient], spec: &ContractSpec) {
+pub async fn run_verifications(
+    ready_for_verify: &[WalletClient],
+    spec: &ContractSpec,
+    source_chain: Option<&str>,
+) {
     if ready_for_verify.is_empty() {
         return;
     }
@@ -280,6 +405,35 @@ pub async fn run_verifications(ready_for_verify: &[WalletClient], spec: &Contrac
 
     let api_key: Option<String> = var(Constants::ETHERSCAN_API_KEY_ENV).ok();
 
+    let cross_chain_source: Option<Arc<SourceCodeResult>> =
+        if let (None, Some(addr), Some(key)) = (path, address, &api_key) {
+            let source_chain_id: Option<u64> = source_chain.and_then(|sc| {
+                let chain = Chain::from_flag(sc)?;
+                etherscan_chain_id(chain.as_rpc_key(), chain.network())
+            });
+
+            if let Some(scid) = source_chain_id {
+                info!("Fetching verified source from source chain (id: {scid})");
+                match fetch_verified_source(key, scid, addr, name).await {
+                    Ok(source) => {
+                        info!(
+                            "Fetched source: {} ({})",
+                            source.contract_name, source.compiler_version
+                        );
+                        Some(Arc::new(source))
+                    }
+                    Err(e) => {
+                        warn!("Failed to fetch source from source chain: {e}");
+                        None
+                    }
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
     let mut verify_set: JoinSet<()> = JoinSet::new();
 
     for (i, deployer) in ready_for_verify.iter().enumerate() {
@@ -292,6 +446,7 @@ pub async fn run_verifications(ready_for_verify: &[WalletClient], spec: &Contrac
         let chain_id: Option<u64> = etherscan_chain_id(chain_key, network);
         let api_key: Option<String> = api_key.clone();
         let delay: u64 = i as u64;
+        let cross_source: Option<Arc<SourceCodeResult>> = cross_chain_source.clone();
 
         verify_set.spawn(async move {
             if delay > 0 {
@@ -307,6 +462,10 @@ pub async fn run_verifications(ready_for_verify: &[WalletClient], spec: &Contrac
                     .await
                     .map_err(|e| VerifierError::VerificationFailed(name, e.to_string()))
                     .and_then(|r| r)
+                }
+                (Some(addr), None, Some(cid), Some(key)) if cross_source.is_some() => {
+                    let source = cross_source.unwrap();
+                    verify_cross_chain(&key, &source, cid, addr, name, &chain).await
                 }
                 (None, _, _, _) => Err(VerifierError::MissingAddress(name)),
                 (_, None, _, _) => Err(VerifierError::MissingContractPath(name)),

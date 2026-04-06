@@ -43,13 +43,19 @@ pub fn check_before(contract_to_deploy: Option<&ContractSpec>, args: &CliArgs) {
         info!("verify_json_path contract: {:?}", spec.verify_json_path);
         info!("salt contract: {:?}", spec.salt);
 
-        match verify_create2_address(spec) {
-            Ok(addr) => {
-                info!("CREATE2 address verified: {addr}");
+        if spec.deployer_tx.is_some() {
+            if let Some(addr) = spec.address {
+                info!("Contract address (pre-built tx): {addr}");
             }
-            Err(e) => {
-                error!("CREATE2 verification failed: {e}");
-                exit(1);
+        } else {
+            match verify_create2_address(spec) {
+                Ok(addr) => {
+                    info!("CREATE2 address verified: {addr}");
+                }
+                Err(e) => {
+                    error!("CREATE2 verification failed: {e}");
+                    exit(1);
+                }
             }
         }
     } else if args.contract_name.is_some() || args.address.is_some() || args.contract_path.is_some()

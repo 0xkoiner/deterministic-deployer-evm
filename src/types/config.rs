@@ -61,6 +61,24 @@ pub struct EtherscanResponse {
     pub result: String,
 }
 
+#[derive(Deserialize)]
+pub struct SourceCodeResult {
+    #[serde(rename = "SourceCode")]
+    pub source_code: String,
+    #[serde(rename = "ContractName")]
+    pub contract_name: String,
+    #[serde(rename = "CompilerVersion")]
+    pub compiler_version: String,
+    #[serde(rename = "ConstructorArguments")]
+    pub constructor_arguments: String,
+}
+
+#[derive(Deserialize)]
+pub struct GetSourceCodeResponse {
+    pub status: String,
+    pub result: Vec<SourceCodeResult>,
+}
+
 pub struct CliArgs {
     pub contract_path: Option<PathBuf>,
     pub chains: Vec<Chain>,
@@ -70,6 +88,7 @@ pub struct CliArgs {
     pub verify: bool,
     pub constructor_args: Option<Bytes>,
     pub keystore: bool,
+    pub source_chain: Option<String>,
 }
 
 pub struct PrecheckResult {

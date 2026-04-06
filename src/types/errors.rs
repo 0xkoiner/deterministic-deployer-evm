@@ -130,6 +130,8 @@ pub enum VerifierError {
     HttpError(&'static str, String),
     #[error("forge not found — install Foundry: {0}")]
     ForgeNotFound(String),
+    #[error("Contract not verified on source chain {0}")]
+    NotVerifiedOnSource(String),
 }
 
 #[derive(Debug, thiserror::Error)]
