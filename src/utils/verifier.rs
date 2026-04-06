@@ -4,44 +4,26 @@ use std::fs::read_to_string;
 use std::process::Command;
 use std::process::Output;
 use std::time::Duration;
+use serde_json::{Value, Map};
 
 use alloy::primitives::{Address, hex};
 use alloy::transports::http::reqwest;
 use alloy::transports::http::reqwest::Client;
 use log::{error, info, warn};
-use serde::Deserialize;
 use tokio::task::{JoinSet, spawn_blocking};
 use tokio::time::sleep;
 
-use crate::types::config::{Chain, ContractSpec, EtherscanResponse, PublicClient, WalletClient};
+use crate::types::config::{Chain, ContractSpec, EtherscanResponse, PublicClient, WalletClient, SourceCodeResult, GetSourceCodeResponse};
 use crate::types::constants::Constants;
 use crate::types::errors::VerifierError;
 
 const POLL_INTERVAL: Duration = Duration::from_secs(3);
 const MAX_POLL_ATTEMPTS: u32 = 20;
 
-#[derive(Deserialize)]
-struct SourceCodeResult {
-    #[serde(rename = "SourceCode")]
-    source_code: String,
-    #[serde(rename = "ContractName")]
-    contract_name: String,
-    #[serde(rename = "CompilerVersion")]
-    compiler_version: String,
-    #[serde(rename = "ConstructorArguments")]
-    constructor_arguments: String,
-}
-
-#[derive(Deserialize)]
-struct GetSourceCodeResponse {
-    status: String,
-    result: Vec<SourceCodeResult>,
-}
-
 fn find_contract_file(source_json: &str, contract_name: &str) -> Option<String> {
-    let parsed: serde_json::Value = serde_json::from_str(source_json).ok()?;
-    let sources = parsed.get("sources")?.as_object()?;
-    let suffix = format!("{contract_name}.sol");
+    let parsed: Value = serde_json::from_str(source_json).ok()?;
+    let sources: &Map<String, Value> = parsed.get("sources")?.as_object()?;
+    let suffix: String = format!("{contract_name}.sol");
     sources
         .keys()
         .find(|k| k.ends_with(&suffix))
@@ -73,7 +55,8 @@ async fn fetch_verified_source(
         return Err(VerifierError::NotVerifiedOnSource(format!("chain_id {chain_id}")));
     }
 
-    let mut source = resp.result.into_iter().next().unwrap();
+    let mut source = resp.result.into_iter().next()
+        .ok_or_else(|| VerifierError::NotVerifiedOnSource(format!("chain_id {chain_id}")))?;
 
     if source.source_code.is_empty() || source.contract_name.is_empty() {
         return Err(VerifierError::NotVerifiedOnSource(format!("chain_id {chain_id}")));
@@ -84,7 +67,7 @@ async fn fetch_verified_source(
     }
 
     if !source.contract_name.contains(':') {
-        let contract_file = find_contract_file(&source.source_code, &source.contract_name);
+        let contract_file: Option<String> = find_contract_file(&source.source_code, &source.contract_name);
         if let Some(file) = contract_file {
             source.contract_name = format!("{file}:{}", source.contract_name);
         }
@@ -135,8 +118,18 @@ async fn verify_cross_chain(
     let guid: String = resp.result;
     info!("Cross-chain verification submitted for '{name}' on {chain} (guid: {guid})");
 
+    poll_verification_status(&client, target_chain_id, api_key, &guid, name).await
+}
+
+async fn poll_verification_status(
+    client: &Client,
+    chain_id: u64,
+    api_key: &str,
+    guid: &str,
+    name: &'static str,
+) -> Result<String, VerifierError> {
     let status_url: String = format!(
-        "{}?module=contract&action=checkverifystatus&guid={guid}&chainid={target_chain_id}&apikey={api_key}",
+        "{}?module=contract&action=checkverifystatus&guid={guid}&chainid={chain_id}&apikey={api_key}",
         Constants::ETHERSCAN_V2_URL
     );
 
@@ -161,7 +154,7 @@ async fn verify_cross_chain(
         }
     }
 
-    Err(VerifierError::Timeout(name, guid))
+    Err(VerifierError::Timeout(name, guid.to_string()))
 }
 
 fn url_encode(s: &str) -> String {
@@ -378,33 +371,7 @@ async fn verify_via_etherscan_api(
         spec.name
     );
 
-    let status_url: String = format!(
-        "{}?module=contract&action=checkverifystatus&guid={guid}&chainid={chain_id}&apikey={api_key}",
-        Constants::ETHERSCAN_V2_URL
-    );
-
-    for _ in 0..MAX_POLL_ATTEMPTS {
-        sleep(POLL_INTERVAL).await;
-
-        let status: EtherscanResponse = client
-            .get(&status_url)
-            .send()
-            .await
-            .map_err(|e| VerifierError::HttpError(spec.name, e.to_string()))?
-            .json()
-            .await
-            .map_err(|e| VerifierError::HttpError(spec.name, e.to_string()))?;
-
-        if status.result.contains("Pass") || status.result.contains("Already Verified") {
-            return Ok(status.result);
-        }
-
-        if status.result.contains("Fail") {
-            return Err(VerifierError::VerificationFailed(spec.name, status.result));
-        }
-    }
-
-    Err(VerifierError::Timeout(spec.name, guid))
+    poll_verification_status(&client, chain_id, api_key, &guid, spec.name).await
 }
 
 pub async fn run_verifications(
@@ -430,21 +397,20 @@ pub async fn run_verifications(
     let api_key: Option<String> = var(Constants::ETHERSCAN_API_KEY_ENV).ok();
 
     let cross_chain_source: Option<SourceCodeResult> =
-        if path.is_none() && address.is_some() && api_key.is_some() {
-            let addr: Address = address.unwrap();
-            let key: &str = api_key.as_deref().unwrap();
-
-            let source_chain_id: Option<u64> = source_chain
-                .and_then(|sc| {
-                    let chain = Chain::from_flag(sc)?;
-                    etherscan_chain_id(chain.as_rpc_key(), chain.network())
-                });
+        if let (None, Some(addr), Some(key)) = (path, address, &api_key) {
+            let source_chain_id: Option<u64> = source_chain.and_then(|sc| {
+                let chain = Chain::from_flag(sc)?;
+                etherscan_chain_id(chain.as_rpc_key(), chain.network())
+            });
 
             if let Some(scid) = source_chain_id {
                 info!("Fetching verified source from source chain (id: {scid})");
                 match fetch_verified_source(key, scid, addr, name).await {
                     Ok(source) => {
-                        info!("Fetched source: {} ({})", source.contract_name, source.compiler_version);
+                        info!(
+                            "Fetched source: {} ({})",
+                            source.contract_name, source.compiler_version
+                        );
                         Some(source)
                     }
                     Err(e) => {

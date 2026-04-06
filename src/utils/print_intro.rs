@@ -1,4 +1,4 @@
-const INTRO: &'static str = r#"
+const INTRO: &str = r"
                           ___________________
                          /      Deploy       \           █████           █████                                        ███              ███           █████     ███ 
           ___________   /   Contract in one   \         ░░███           ░░███                                         ░░░              ░░░           ░░███     ░░░     
@@ -22,7 +22,7 @@ const INTRO: &'static str = r#"
       /_____|  |_____\                                               ░░░░░                      ░░░░░░
     ___|   |    |   |___
    (_______|    |_______)
-"#;
+";
 
 
 pub fn print_intro_log() {
