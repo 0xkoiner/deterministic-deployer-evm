@@ -29,7 +29,7 @@ pub async fn deploy_contract(
         .ok_or_else(|| DeployError::NoProvider(wallet.address()))?;
 
     let calldata: Bytes = if let Some(tx_data) = spec.deployer_tx {
-        Bytes::copy_from_slice(tx_data)
+        Bytes::from_static(tx_data)
     } else {
         let salt: FixedBytes<32> = spec.salt.ok_or(DeployError::MissingSalt(spec.name))?;
         let init_code: Bytes = spec

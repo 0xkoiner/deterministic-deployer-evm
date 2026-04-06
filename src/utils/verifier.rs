@@ -3,8 +3,9 @@ use std::env::var;
 use std::fs::read_to_string;
 use std::process::Command;
 use std::process::Output;
+use std::sync::Arc;
 use std::time::Duration;
-use serde_json::{Value, Map};
+use serde_json::{Value, Map, from_str};
 
 use alloy::primitives::{Address, hex};
 use alloy::transports::http::reqwest;
@@ -21,7 +22,7 @@ const POLL_INTERVAL: Duration = Duration::from_secs(3);
 const MAX_POLL_ATTEMPTS: u32 = 20;
 
 fn find_contract_file(source_json: &str, contract_name: &str) -> Option<String> {
-    let parsed: Value = serde_json::from_str(source_json).ok()?;
+    let parsed: Value = from_str(source_json).ok()?;
     let sources: &Map<String, Value> = parsed.get("sources")?.as_object()?;
     let suffix: String = format!("{contract_name}.sol");
     sources
@@ -55,7 +56,7 @@ async fn fetch_verified_source(
         return Err(VerifierError::NotVerifiedOnSource(format!("chain_id {chain_id}")));
     }
 
-    let mut source = resp.result.into_iter().next()
+    let mut source: SourceCodeResult = resp.result.into_iter().next()
         .ok_or_else(|| VerifierError::NotVerifiedOnSource(format!("chain_id {chain_id}")))?;
 
     if source.source_code.is_empty() || source.contract_name.is_empty() {
@@ -116,7 +117,7 @@ async fn verify_cross_chain(
     }
 
     let guid: String = resp.result;
-    info!("Cross-chain verification submitted for '{name}' on {chain} (guid: {guid})");
+    warn!("Cross-chain verification submitted for '{name}' on {chain} (guid: {guid})");
 
     poll_verification_status(&client, target_chain_id, api_key, &guid, name).await
 }
@@ -396,7 +397,7 @@ pub async fn run_verifications(
 
     let api_key: Option<String> = var(Constants::ETHERSCAN_API_KEY_ENV).ok();
 
-    let cross_chain_source: Option<SourceCodeResult> =
+    let cross_chain_source: Option<Arc<SourceCodeResult>> =
         if let (None, Some(addr), Some(key)) = (path, address, &api_key) {
             let source_chain_id: Option<u64> = source_chain.and_then(|sc| {
                 let chain = Chain::from_flag(sc)?;
@@ -411,7 +412,7 @@ pub async fn run_verifications(
                             "Fetched source: {} ({})",
                             source.contract_name, source.compiler_version
                         );
-                        Some(source)
+                        Some(Arc::new(source))
                     }
                     Err(e) => {
                         warn!("Failed to fetch source from source chain: {e}");
@@ -437,11 +438,7 @@ pub async fn run_verifications(
         let chain_id: Option<u64> = etherscan_chain_id(chain_key, network);
         let api_key: Option<String> = api_key.clone();
         let delay: u64 = i as u64;
-        let has_cross_chain: bool = cross_chain_source.is_some();
-        let cross_source_code: Option<String> = cross_chain_source.as_ref().map(|s| s.source_code.clone());
-        let cross_contract_name: Option<String> = cross_chain_source.as_ref().map(|s| s.contract_name.clone());
-        let cross_compiler_version: Option<String> = cross_chain_source.as_ref().map(|s| s.compiler_version.clone());
-        let cross_constructor_args: Option<String> = cross_chain_source.as_ref().map(|s| s.constructor_arguments.clone());
+        let cross_source: Option<Arc<SourceCodeResult>> = cross_chain_source.clone();
 
         verify_set.spawn(async move {
             if delay > 0 {
@@ -458,13 +455,8 @@ pub async fn run_verifications(
                     .map_err(|e| VerifierError::VerificationFailed(name, e.to_string()))
                     .and_then(|r| r)
                 }
-                (Some(addr), None, Some(cid), Some(key)) if has_cross_chain => {
-                    let source = SourceCodeResult {
-                        source_code: cross_source_code.unwrap(),
-                        contract_name: cross_contract_name.unwrap(),
-                        compiler_version: cross_compiler_version.unwrap(),
-                        constructor_arguments: cross_constructor_args.unwrap(),
-                    };
+                (Some(addr), None, Some(cid), Some(key)) if cross_source.is_some() => {
+                    let source = cross_source.unwrap();
                     verify_cross_chain(&key, &source, cid, addr, name, &chain).await
                 }
                 (None, _, _, _) => Err(VerifierError::MissingAddress(name)),
