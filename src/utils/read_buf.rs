@@ -168,6 +168,7 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
     let mut verify: bool = false;
     let mut constructor_args: Option<Bytes> = None;
     let mut keystore: bool = false;
+    let mut source_chain: Option<String> = None;
     let mut chains: Vec<Chain> = Vec::with_capacity(Chain::COUNT);
     let mut seen: ChainSet = ChainSet::new();
     let mut parser: lexopt::Parser = lexopt::Parser::from_env();
@@ -204,6 +205,15 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
             }
             Long("keystore") => {
                 keystore = true;
+            }
+            Long("source-chain") => {
+                let val: OsString = parser
+                    .value()
+                    .map_err(|e| CliError::ParseError(e.to_string()))?;
+                let val_str = val
+                    .to_str()
+                    .ok_or_else(|| CliError::ParseError("invalid UTF-8".to_string()))?;
+                source_chain = Some(val_str.to_string());
             }
             Long("constructor-args") => {
                 let val: OsString = parser
@@ -266,6 +276,7 @@ pub fn parse_args() -> Result<CliArgs, CliError> {
         verify,
         constructor_args,
         keystore,
+        source_chain,
     })
 }
 
@@ -278,6 +289,7 @@ fn print_usage() {
     eprintln!("  --address <hex>         Contract address (hex, with or without 0x)");
     eprintln!("  --verify                Enable contract verification");
     eprintln!("  --keystore              Create and use an encrypted keystore");
+    eprintln!("  --source-chain <chain>  Chain with verified source (for cross-chain verification)");
     eprintln!(
         "  --constructor-args <hex> ABI-encoded constructor arguments (hex, with or without 0x)"
     );

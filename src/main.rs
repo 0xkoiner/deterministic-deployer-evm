@@ -100,6 +100,6 @@ async fn main() {
     ready_for_verify.extend(deployed);
 
     if args.verify {
-        run_verifications(&ready_for_verify, &spec).await;
+        run_verifications(&ready_for_verify, &spec, args.source_chain.as_deref()).await;
     }
 }

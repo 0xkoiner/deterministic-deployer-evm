@@ -70,6 +70,7 @@ pub struct CliArgs {
     pub verify: bool,
     pub constructor_args: Option<Bytes>,
     pub keystore: bool,
+    pub source_chain: Option<String>,
 }
 
 pub struct PrecheckResult {
