@@ -13,10 +13,10 @@ contract DeployMockERC4626 is Script {
         vm.startBroadcast();
 
         bytes memory constructorArgs = abi.encode(address(0xcafe));
-        console.logBytes(constructorArgs);
+        // console.logBytes(constructorArgs);
 
         bytes memory creationCode = abi.encodePacked(type(ERC4626Mock).creationCode, constructorArgs);
-        // console.logBytes(creationCode);
+        console.logBytes(creationCode);
 
         address expectedAddress = vm.computeCreate2Address(salt, keccak256(creationCode), CREATE2_DEPLOYER);
 
