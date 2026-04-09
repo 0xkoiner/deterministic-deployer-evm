@@ -74,11 +74,11 @@ deterministic-deployer-evm \
 See [documentation/](documentation/) for full reference.
 
 ## Future Features
-[] Blockscout Verification
-[] Standard Json Input File Verification
-[] Support More Chains/Explorers
-[] Sponsoring Transaction (erc4337)
-[] Support 7702
+- [] Blockscout Verification
+- [] Standard Json Input File Verification
+- [] Support More Chains/Explorers
+- [] Sponsoring Transaction (erc4337)
+- [] Support 7702
 
 ## License
 
